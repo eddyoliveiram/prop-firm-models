@@ -16,6 +16,10 @@ const targetCushionInput = document.getElementById('targetCushion');
 const ddCushionInput = document.getElementById('ddCushion');
 const ddTypeCushionTrailing = document.getElementById('ddTypeCushionTrailing');
 const ddTypeCushionStatic = document.getElementById('ddTypeCushionStatic');
+const enableCushionInput = document.getElementById('enableCushion');
+const cushionConfigCard = document.getElementById('cushionConfigCard');
+const cushionTradesCard = document.getElementById('cushionTradesCard');
+const cushionExecutionCard = document.getElementById('cushionExecutionCard');
 const targetSaqueInput = document.getElementById('targetSaque');
 const ddSaqueInput = document.getElementById('ddSaque');
 const ddTypeSaqueTrailing = document.getElementById('ddTypeSaqueTrailing');
@@ -156,6 +160,21 @@ function setModelLabel(text) {
   modelLabel.textContent = `Modelo atual: ${text}`;
 }
 
+function isCushionEnabled() {
+  return enableCushionInput.checked;
+}
+
+function updateCushionDisabledState() {
+  const disabled = !isCushionEnabled();
+  if (cushionConfigCard) {
+    cushionConfigCard.classList.toggle('disabled', false);
+  }
+  [cushionTradesCard, cushionExecutionCard].forEach((card) => {
+    if (!card) return;
+    card.classList.toggle('disabled', disabled);
+  });
+}
+
 function createPhaseState(initialStatus) {
   return {
     equity: 0,
@@ -217,6 +236,10 @@ function updateRunInfoApproval() {
 }
 
 function updateRunInfoCushion() {
+  if (!isCushionEnabled()) {
+    runInfoCushion.textContent = 'Fase Colchão desabilitada';
+    return;
+  }
   const eligible = accounts.filter((account) => account.approval.status === 'success');
   const active = eligible.filter((account) => account.cushion.status === 'active').length;
   const pending = eligible.filter((account) => account.cushion.status === 'pending').length;
@@ -240,7 +263,9 @@ function updateRunInfoCushion() {
 }
 
 function updateRunInfoSaque() {
-  const eligible = accounts.filter((account) => account.cushion.status === 'success');
+  const eligible = isCushionEnabled()
+    ? accounts.filter((account) => account.cushion.status === 'success')
+    : accounts.filter((account) => account.approval.status === 'success');
   const active = eligible.filter((account) => account.saque.status === 'active').length;
   const pending = eligible.filter((account) => account.saque.status === 'pending').length;
   const success = eligible.filter((account) => account.saque.status === 'success').length;
@@ -308,8 +333,15 @@ function renderAccounts(phaseKey) {
   const container = phase.accountsGrid;
   container.innerHTML = '';
   const toRender = accounts.filter((account) => {
-    if (phaseKey === 'cushion') return account.approval.status === 'success';
-    if (phaseKey === 'saque') return account.cushion.status === 'success';
+    if (phaseKey === 'cushion') {
+      if (!isCushionEnabled()) return false;
+      return account.approval.status === 'success';
+    }
+    if (phaseKey === 'saque') {
+      return isCushionEnabled()
+        ? account.cushion.status === 'success'
+        : account.approval.status === 'success';
+    }
     return true;
   });
 
@@ -343,7 +375,13 @@ function renderAccounts(phaseKey) {
           <strong>${formatMoney(getBreakPoint(phaseKey, phaseState))}</strong>
         </div>
       </div>
-      <div class="account-history" aria-label="Histórico de trades"></div>
+      <div class="account-history" aria-label="Histórico de trades">
+        <div class="history-header">
+          <span class="muted">Trades</span>
+          <strong class="history-count">0</strong>
+        </div>
+        <div class="history-dots"></div>
+      </div>
     `;
     container.appendChild(card);
   });
@@ -365,15 +403,18 @@ function updateAccountCard(phaseKey, accountId) {
   metrics[2].textContent = phaseState.lastDelta === 0 ? '-' : formatMoney(phaseState.lastDelta);
   metrics[3].textContent = formatMoney(getBreakPoint(phaseKey, phaseState));
   const historyEl = card.querySelector('.account-history');
-  historyEl.innerHTML = '';
-  phaseState.history.slice(0, 6).forEach((entry) => {
-    const item = document.createElement('div');
-    item.className = `history-item ${entry.delta >= 0 ? 'positive' : 'negative'}`;
-    item.innerHTML = `
-      <span>${entry.label}</span>
-      <span>${entry.delta >= 0 ? '+' : ''}${formatMoney(entry.delta)}</span>
-    `;
-    historyEl.appendChild(item);
+  const dotsEl = historyEl.querySelector('.history-dots');
+  const countEl = historyEl.querySelector('.history-count');
+  dotsEl.innerHTML = '';
+
+  countEl.textContent = String(phaseState.history.length);
+  phaseState.history
+    .slice()
+    .reverse()
+    .forEach((entry) => {
+    const dot = document.createElement('span');
+    dot.className = `history-dot ${entry.delta >= 0 ? 'positive' : 'negative'}`;
+    dotsEl.appendChild(dot);
   });
 }
 
@@ -457,14 +498,25 @@ function runApprovalStep() {
     stopApproval();
     const eligible = accounts.filter((account) => account.approval.status === 'success');
     if (eligible.length > 0) {
+      if (isCushionEnabled()) {
+        eligible.forEach((account) => {
+          if (account.cushion.status === 'pending') {
+            account.cushion.status = 'active';
+          }
+        });
+        renderAccounts('cushion');
+        updateRunInfoCushion();
+        startCushion();
+        return;
+      }
       eligible.forEach((account) => {
-        if (account.cushion.status === 'pending') {
-          account.cushion.status = 'active';
+        if (account.saque.status === 'locked') {
+          account.saque.status = 'pending';
         }
       });
-      renderAccounts('cushion');
-      updateRunInfoCushion();
-      startCushion();
+      renderAccounts('saque');
+      updateRunInfoSaque();
+      startSaque();
       return;
     }
     setStatus('Fase de Aprovação encerrada', 'success');
@@ -474,6 +526,10 @@ function runApprovalStep() {
 }
 
 function runCushionStep() {
+  if (!isCushionEnabled()) {
+    stopCushion();
+    return;
+  }
   const trades = getTradesFrom(tradesCushionEl);
   if (trades.length === 0) return;
 
@@ -563,9 +619,12 @@ function runSaqueStep() {
 
   const target = Number(targetSaqueInput.value) || 0;
   const dd = Number(ddSaqueInput.value) || 0;
-  const activeAccounts = accounts.filter(
-    (account) => account.cushion.status === 'success' && account.saque.status === 'active'
-  );
+  const activeAccounts = accounts.filter((account) => {
+    const eligible = isCushionEnabled()
+      ? account.cushion.status === 'success'
+      : account.approval.status === 'success';
+    return eligible && account.saque.status === 'active';
+  });
 
   if (activeAccounts.length === 0) {
     stopSaque();
@@ -574,7 +633,10 @@ function runSaqueStep() {
   }
 
   accounts.forEach((account) => {
-    if (account.cushion.status !== 'success') return;
+    const eligible = isCushionEnabled()
+      ? account.cushion.status === 'success'
+      : account.approval.status === 'success';
+    if (!eligible) return;
     if (account.saque.status !== 'active') return;
 
     const trade = trades[account.saque.tradeIndex % trades.length];
@@ -607,9 +669,12 @@ function runSaqueStep() {
   updateStats();
   updateRunInfoSaque();
 
-  const stillActive = accounts.filter(
-    (account) => account.cushion.status === 'success' && account.saque.status === 'active'
-  ).length;
+  const stillActive = accounts.filter((account) => {
+    const eligible = isCushionEnabled()
+      ? account.cushion.status === 'success'
+      : account.approval.status === 'success';
+    return eligible && account.saque.status === 'active';
+  }).length;
 
   if (stillActive === 0) {
     stopSaque();
@@ -640,6 +705,7 @@ function stopApproval() {
 
 function startCushion() {
   if (cushionTimer) return;
+  if (!isCushionEnabled()) return;
   const eligible = accounts.filter((account) => account.approval.status === 'success');
   if (eligible.length === 0) return;
   eligible.forEach((account) => {
@@ -668,7 +734,9 @@ function stopCushion() {
 
 function startSaque() {
   if (saqueTimer) return;
-  const eligible = accounts.filter((account) => account.cushion.status === 'success');
+  const eligible = isCushionEnabled()
+    ? accounts.filter((account) => account.cushion.status === 'success')
+    : accounts.filter((account) => account.approval.status === 'success');
   if (eligible.length === 0) return;
   eligible.forEach((account) => {
     if (account.saque.status === 'pending') {
@@ -767,6 +835,17 @@ resetAllBtn.addEventListener('click', () => {
   input.addEventListener('change', updateStats);
 });
 
+enableCushionInput.addEventListener('change', () => {
+  if (!enableCushionInput.checked && cushionTimer) {
+    stopCushion();
+  }
+  updateCushionDisabledState();
+  renderAccounts('cushion');
+  renderAccounts('saque');
+  updateRunInfoCushion();
+  updateRunInfoSaque();
+});
+
 accountsInput.addEventListener('input', () => {
   if (approvalTimer || cushionTimer || saqueTimer) return;
   resetSimulation();
@@ -786,3 +865,4 @@ addTradeTo(tradesSaqueEl, { risk: 250, reward: 250 });
 addTradeTo(tradesSaqueEl, { risk: 250, reward: 250 });
 addTradeTo(tradesSaqueEl, { risk: 250, reward: 250 });
 setModelLabel('padrão');
+updateCushionDisabledState();

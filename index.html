@@ -11,7 +11,7 @@
     <header class="hero">
       <div>
         <p class="eyebrow">Prop Firm Models</p>
-        <p class="subtitle">Simulação de trades com drawdown trailing e alvo configurável.</p>
+        <p class="subtitle">Simulação de trades com drawdown trailing ou static, múltiplas fases e gestão de trades configuráveis para cada fase.</p>
       </div>
     </header>
 
@@ -85,8 +85,14 @@
     </section>
 
     <section class="panel grid">
-      <div class="card">
+      <div class="card" id="cushionConfigCard">
         <h2>Configurações da fase Colchão</h2>
+        <div class="field">
+          <label class="radio">
+            <input type="checkbox" id="enableCushion" checked />
+            Habilitar fase Colchão
+          </label>
+        </div>
         <div class="field">
           <label for="targetCushion">Objetivo (R$)</label>
           <input id="targetCushion" type="number" step="100" value="2000" />
@@ -110,7 +116,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" id="cushionTradesCard">
         <div class="row">
           <h2>Trades da fase Colchão</h2>
           <button id="addTradeCushion" class="ghost">+ Adicionar trade</button>
@@ -227,7 +233,7 @@
     </section>
 
     <section class="panel">
-      <div class="card log full">
+      <div class="card log full" id="cushionExecutionCard">
         <div class="row">
           <h2>Execução Fase Colchão</h2>
           <span id="runInfoCushion" class="muted">Sem trades executados</span>
