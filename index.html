@@ -1,0 +1,226 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simulador de Fase de Aprovação</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Prop Firm Models</p>
+        <p class="subtitle">Simulação de trades com drawdown trailing e alvo configurável.</p>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="card full">
+        <h2>Configuração da sessão</h2>
+        <div class="field">
+          <label for="accounts">Número de contas na sessão</label>
+          <input id="accounts" type="number" step="1" min="1" value="10" />
+        </div>
+        <div class="field">
+          <label for="accountValue">Valor da conta (US$)</label>
+          <input id="accountValue" type="number" step="1" min="0" value="90" />
+        </div>
+        <div class="field">
+          <label for="payout">Payout por aprovação (US$)</label>
+          <input id="payout" type="number" step="1" min="0" value="1500" />
+        </div>
+        <div class="summary session-summary">
+          <div>
+            <span>Investimento total</span>
+            <strong id="investedTotal">US$ 0</strong>
+          </div>
+          <div>
+            <span>Lucro atual</span>
+            <strong id="profitTotal">US$ 0</strong>
+          </div>
+        </div>
+        <p class="muted">Esse valor vale para todas as fases da simulação.</p>
+      </div>
+    </section>
+
+    <section class="panel grid">
+      <div class="card">
+        <h2>Configurações da fase de Aprovação</h2>
+        <div class="field">
+          <label for="target">Objetivo (R$)</label>
+          <input id="target" type="number" step="100" value="3000" />
+        </div>
+        <div class="field">
+          <label for="dd">Drawdown trailing (R$)</label>
+          <input id="dd" type="number" step="100" value="-2000" />
+        </div>
+        <div class="field">
+          <label for="speed">Velocidade (segundos)</label>
+          <input id="speed" type="number" step="0.1" value="0.1" />
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <h2>Trades da fase de Aprovação</h2>
+          <button id="addTrade" class="ghost">+ Adicionar trade</button>
+        </div>
+        <p class="muted">Preencha risco e retorno. A taxa de acerto assume EV neutro.</p>
+        <div id="trades" class="trades"></div>
+      </div>
+    </section>
+
+    <section class="panel grid">
+      <div class="card">
+        <h2>Configurações da fase Colchão</h2>
+        <div class="field">
+          <label for="targetCushion">Objetivo (R$)</label>
+          <input id="targetCushion" type="number" step="100" value="2000" />
+        </div>
+        <div class="field">
+          <label for="ddCushion">Drawdown trailing (R$)</label>
+          <input id="ddCushion" type="number" step="100" value="-2000" />
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <h2>Trades da fase Colchão</h2>
+          <button id="addTradeCushion" class="ghost">+ Adicionar trade</button>
+        </div>
+        <p class="muted">Preencha risco e retorno. A taxa de acerto assume EV neutro.</p>
+        <div id="tradesCushion" class="trades"></div>
+      </div>
+    </section>
+
+    <section class="panel grid">
+      <div class="card">
+        <h2>Configurações da fase Saque</h2>
+        <div class="field">
+          <label for="targetSaque">Objetivo (R$)</label>
+          <input id="targetSaque" type="number" step="100" value="1000" />
+        </div>
+        <div class="field">
+          <label for="ddSaque">Drawdown trailing (R$)</label>
+          <input id="ddSaque" type="number" step="100" value="-2000" />
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <h2>Trades da fase Saque</h2>
+          <button id="addTradeSaque" class="ghost">+ Adicionar trade</button>
+        </div>
+        <p class="muted">Preencha risco e retorno. A taxa de acerto assume EV neutro.</p>
+        <div id="tradesSaque" class="trades"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="card full">
+        <h2>Controles da simulação</h2>
+        <div class="actions">
+          <button id="modelDefault" class="ghost">Modelo padrão</button>
+          <button id="modelScaled" class="ghost">Modelo Escalonável</button>
+        </div>
+        <div class="actions">
+          <button id="startAll" class="primary">Iniciar simulação</button>
+          <button id="stopAll" class="ghost" disabled>Parar</button>
+          <button id="resetAll" class="ghost">Resetar</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="card full">
+        <div class="row">
+          <h2>Relatório final</h2>
+          <div class="status" id="statusBadge">Pronto para simular</div>
+        </div>
+        <div class="summary report-summary">
+          <div>
+            <span>Contas compradas</span>
+            <strong id="reportBought">0</strong>
+          </div>
+          <div>
+            <span>Aprovadas (Aprovação)</span>
+            <strong id="reportApproval">0</strong>
+          </div>
+          <div>
+            <span>Aprovadas (Colchão)</span>
+            <strong id="reportCushion">0</strong>
+          </div>
+          <div>
+            <span>Chegaram ao Saque</span>
+            <strong id="reportSaque">0</strong>
+          </div>
+          <div>
+            <span>Total investido</span>
+            <strong id="reportInvested">US$ 0</strong>
+          </div>
+          <div>
+            <span>Retorno</span>
+            <strong id="reportReturn">US$ 0</strong>
+          </div>
+          <div>
+            <span>ROI</span>
+            <strong id="reportRoi">0%</strong>
+          </div>
+        </div>
+        <p class="muted">Retorno considera somente contas aprovadas na fase Saque.</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="card log full">
+        <div class="row">
+          <h2>Execução da Fase de Aprovação</h2>
+          <span id="runInfoApproval" class="muted">Sem trades executados</span>
+        </div>
+        <div id="accountsGridApproval" class="accounts-grid"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="card log full">
+        <div class="row">
+          <h2>Execução Fase Colchão</h2>
+          <span id="runInfoCushion" class="muted">Sem trades executados</span>
+        </div>
+        <div id="accountsGridCushion" class="accounts-grid"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="card log full">
+        <div class="row">
+          <h2>Execução Fase Saque</h2>
+          <span id="runInfoSaque" class="muted">Sem trades executados</span>
+        </div>
+        <div id="accountsGridSaque" class="accounts-grid"></div>
+      </div>
+    </section>
+  </main>
+
+  <template id="tradeTemplate">
+    <div class="trade">
+      <div class="field">
+        <label>Risco (R$)</label>
+        <input type="number" step="50" value="1000" class="risk" />
+      </div>
+      <div class="field">
+        <label>Retorno (R$)</label>
+        <input type="number" step="50" value="1000" class="reward" />
+      </div>
+      <div class="prob">
+        <span>Taxa de acerto</span>
+        <strong class="probValue">50%</strong>
+      </div>
+      <button class="remove">Remover</button>
+    </div>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
