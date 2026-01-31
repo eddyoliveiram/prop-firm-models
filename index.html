@@ -52,8 +52,21 @@
           <input id="target" type="number" step="100" value="3000" />
         </div>
         <div class="field">
-          <label for="dd">Drawdown trailing (R$)</label>
+          <label for="dd">Drawdown (R$)</label>
           <input id="dd" type="number" step="100" value="-2000" />
+        </div>
+        <div class="field">
+          <label>Tipo de drawdown</label>
+          <div class="radio-group">
+            <label class="radio">
+              <input type="radio" name="ddTypeApproval" id="ddTypeTrailing" value="trailing" checked />
+              Trailing
+            </label>
+            <label class="radio">
+              <input type="radio" name="ddTypeApproval" id="ddTypeStatic" value="static" />
+              Static
+            </label>
+          </div>
         </div>
         <div class="field">
           <label for="speed">Velocidade (segundos)</label>
@@ -79,8 +92,21 @@
           <input id="targetCushion" type="number" step="100" value="2000" />
         </div>
         <div class="field">
-          <label for="ddCushion">Drawdown trailing (R$)</label>
+          <label for="ddCushion">Drawdown (R$)</label>
           <input id="ddCushion" type="number" step="100" value="-2000" />
+        </div>
+        <div class="field">
+          <label>Tipo de drawdown</label>
+          <div class="radio-group">
+            <label class="radio">
+              <input type="radio" name="ddTypeCushion" id="ddTypeCushionTrailing" value="trailing" checked />
+              Trailing
+            </label>
+            <label class="radio">
+              <input type="radio" name="ddTypeCushion" id="ddTypeCushionStatic" value="static" />
+              Static
+            </label>
+          </div>
         </div>
       </div>
 
@@ -102,8 +128,21 @@
           <input id="targetSaque" type="number" step="100" value="1000" />
         </div>
         <div class="field">
-          <label for="ddSaque">Drawdown trailing (R$)</label>
+          <label for="ddSaque">Drawdown (R$)</label>
           <input id="ddSaque" type="number" step="100" value="-2000" />
+        </div>
+        <div class="field">
+          <label>Tipo de drawdown</label>
+          <div class="radio-group">
+            <label class="radio">
+              <input type="radio" name="ddTypeSaque" id="ddTypeSaqueTrailing" value="trailing" checked />
+              Trailing
+            </label>
+            <label class="radio">
+              <input type="radio" name="ddTypeSaque" id="ddTypeSaqueStatic" value="static" />
+              Static
+            </label>
+          </div>
         </div>
       </div>
 

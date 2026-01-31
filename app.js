@@ -10,10 +10,16 @@ const stopAllBtn = document.getElementById('stopAll');
 const resetAllBtn = document.getElementById('resetAll');
 const targetInput = document.getElementById('target');
 const ddInput = document.getElementById('dd');
+const ddTypeApprovalTrailing = document.getElementById('ddTypeTrailing');
+const ddTypeApprovalStatic = document.getElementById('ddTypeStatic');
 const targetCushionInput = document.getElementById('targetCushion');
 const ddCushionInput = document.getElementById('ddCushion');
+const ddTypeCushionTrailing = document.getElementById('ddTypeCushionTrailing');
+const ddTypeCushionStatic = document.getElementById('ddTypeCushionStatic');
 const targetSaqueInput = document.getElementById('targetSaque');
 const ddSaqueInput = document.getElementById('ddSaque');
+const ddTypeSaqueTrailing = document.getElementById('ddTypeSaqueTrailing');
+const ddTypeSaqueStatic = document.getElementById('ddTypeSaqueStatic');
 const speedInput = document.getElementById('speed');
 const accountsInput = document.getElementById('accounts');
 const accountValueInput = document.getElementById('accountValue');
@@ -54,6 +60,8 @@ const PHASES = {
     tradesEl,
     targetInput,
     ddInput,
+    ddTypeTrailing: ddTypeApprovalTrailing,
+    ddTypeStatic: ddTypeApprovalStatic,
     accountsGrid: accountsGridApproval,
   },
   cushion: {
@@ -62,6 +70,8 @@ const PHASES = {
     tradesEl: tradesCushionEl,
     targetInput: targetCushionInput,
     ddInput: ddCushionInput,
+    ddTypeTrailing: ddTypeCushionTrailing,
+    ddTypeStatic: ddTypeCushionStatic,
     accountsGrid: accountsGridCushion,
   },
   saque: {
@@ -70,6 +80,8 @@ const PHASES = {
     tradesEl: tradesSaqueEl,
     targetInput: targetSaqueInput,
     ddInput: ddSaqueInput,
+    ddTypeTrailing: ddTypeSaqueTrailing,
+    ddTypeStatic: ddTypeSaqueStatic,
     accountsGrid: accountsGridSaque,
   },
 };
@@ -328,7 +340,7 @@ function renderAccounts(phaseKey) {
         </div>
         <div>
           <span>Limite</span>
-          <strong>${formatMoney(phaseState.peak + (Number(phase.ddInput.value) || 0))}</strong>
+          <strong>${formatMoney(getBreakPoint(phaseKey, phaseState))}</strong>
         </div>
       </div>
       <div class="account-history" aria-label="Histórico de trades"></div>
@@ -351,7 +363,7 @@ function updateAccountCard(phaseKey, accountId) {
   metrics[0].textContent = formatMoney(phaseState.equity);
   metrics[1].textContent = formatMoney(phaseState.peak);
   metrics[2].textContent = phaseState.lastDelta === 0 ? '-' : formatMoney(phaseState.lastDelta);
-  metrics[3].textContent = formatMoney(phaseState.peak + (Number(phase.ddInput.value) || 0));
+  metrics[3].textContent = formatMoney(getBreakPoint(phaseKey, phaseState));
   const historyEl = card.querySelector('.account-history');
   historyEl.innerHTML = '';
   phaseState.history.slice(0, 6).forEach((entry) => {
@@ -363,6 +375,16 @@ function updateAccountCard(phaseKey, accountId) {
     `;
     historyEl.appendChild(item);
   });
+}
+
+function getBreakPoint(phaseKey, phaseState) {
+  const phase = PHASES[phaseKey];
+  const dd = Number(phase.ddInput.value) || 0;
+  const isStatic = phase.ddTypeStatic.checked;
+  if (isStatic) {
+    return dd;
+  }
+  return phaseState.peak + dd;
 }
 
 function statusLabel(phaseKey, status) {
@@ -407,7 +429,7 @@ function runApprovalStep() {
       label: win ? 'Trade vencedor' : 'Trade perdedor',
     });
 
-    const breakPoint = account.approval.peak + dd;
+    const breakPoint = getBreakPoint('approval', account.approval);
     approvalTradesExecuted += 1;
 
     if (account.approval.equity >= target) {
@@ -488,7 +510,7 @@ function runCushionStep() {
       label: win ? 'Trade vencedor' : 'Trade perdedor',
     });
 
-    const breakPoint = account.cushion.peak + dd;
+    const breakPoint = getBreakPoint('cushion', account.cushion);
     cushionTradesExecuted += 1;
 
     if (account.cushion.equity >= target) {
@@ -570,7 +592,7 @@ function runSaqueStep() {
       label: win ? 'Trade vencedor' : 'Trade perdedor',
     });
 
-    const breakPoint = account.saque.peak + dd;
+    const breakPoint = getBreakPoint('saque', account.saque);
     saqueTradesExecuted += 1;
 
     if (account.saque.equity >= target) {
@@ -728,8 +750,21 @@ resetAllBtn.addEventListener('click', () => {
   resetSimulation();
 });
 
-[targetInput, ddInput, targetCushionInput, ddCushionInput, targetSaqueInput, ddSaqueInput].forEach((input) => {
-  input.addEventListener('input', updateStats);
+[
+  targetInput,
+  ddInput,
+  ddTypeApprovalTrailing,
+  ddTypeApprovalStatic,
+  targetCushionInput,
+  ddCushionInput,
+  ddTypeCushionTrailing,
+  ddTypeCushionStatic,
+  targetSaqueInput,
+  ddSaqueInput,
+  ddTypeSaqueTrailing,
+  ddTypeSaqueStatic,
+].forEach((input) => {
+  input.addEventListener('change', updateStats);
 });
 
 accountsInput.addEventListener('input', () => {

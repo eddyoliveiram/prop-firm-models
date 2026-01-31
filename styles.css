@@ -1,14 +1,17 @@
 ﻿@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Crimson+Pro:wght@500&display=swap');
 
 :root {
-  --bg: #f6f2ea;
-  --card: #fffaf2;
-  --ink: #1f1b16;
-  --muted: #6c6258;
-  --accent: #d56d4f;
-  --accent-2: #4b6f62;
-  --border: #e4d8c6;
-  --shadow: 0 24px 60px rgba(40, 25, 15, 0.15);
+  --bg: #0e1424;
+  --card: #141c2e;
+  --ink: #f4f7ff;
+  --muted: #9aa6bf;
+  --accent: #805ad5;
+  --accent-2: #22c55e;
+  --border: #26304a;
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --neutral: #64748b;
 }
 
 * {
@@ -19,7 +22,7 @@ body {
   margin: 0;
   font-family: "Space Grotesk", system-ui, sans-serif;
   color: var(--ink);
-  background: radial-gradient(circle at top, #fff4da 0%, #f2e8d6 35%, #e8dcd0 100%);
+  background: radial-gradient(circle at top, #141c2e 0%, #0e1424 45%, #0a0f1d 100%);
 }
 
 .page {
@@ -58,24 +61,28 @@ h1 {
 }
 
 .status {
-  background: var(--accent);
-  color: #fff8ef;
+  background: #1e293b;
+  color: var(--ink);
   padding: 12px 18px;
   border-radius: 999px;
   font-weight: 600;
   box-shadow: var(--shadow);
+  border: 1px solid var(--border);
 }
 
 .status[data-state="success"] {
-  background: #2f6d4a;
+  background: #134e2a;
+  color: #a7f3d0;
 }
 
 .status[data-state="fail"] {
-  background: #9e3a2e;
+  background: #5f1d1d;
+  color: #fecaca;
 }
 
 .status[data-state="running"] {
-  background: #b45c1f;
+  background: #1d4ed8;
+  color: #bfdbfe;
 }
 
 .panel {
@@ -123,7 +130,35 @@ input {
   border-radius: 12px;
   padding: 10px 12px;
   font-size: 15px;
-  background: #fff;
+  background: #0f172a;
+  color: var(--ink);
+}
+
+select {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 15px;
+  background: #0f172a;
+  color: var(--ink);
+}
+
+.radio-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.radio input {
+  accent-color: var(--accent-2);
 }
 
 .summary {
@@ -142,7 +177,7 @@ input {
 }
 
 .summary div {
-  background: #fff7ea;
+  background: #101827;
   border-radius: 14px;
   padding: 12px 14px;
   border: 1px dashed var(--border);
@@ -184,12 +219,12 @@ button {
 }
 
 button.primary {
-  background: var(--accent-2);
-  color: #fef7ee;
+  background: #1f8f4f;
+  color: #ecfdf3;
 }
 
 button.ghost {
-  background: transparent;
+  background: #0f172a;
   border: 1px solid var(--border);
   color: var(--ink);
 }
@@ -225,14 +260,14 @@ button:disabled {
   padding: 14px;
   border-radius: 18px;
   border: 1px solid var(--border);
-  background: #fff6e7;
+  background: #111827;
   animation: rise 0.4s ease;
 }
 
 .prob {
   padding: 8px 12px;
   border-radius: 12px;
-  background: #fff;
+  background: #0f172a;
   border: 1px solid var(--border);
 }
 
@@ -248,9 +283,9 @@ button:disabled {
 }
 
 .trade .remove {
-  background: #ffe7dc;
-  border: 1px solid #f1b8a4;
-  color: #8d3b1f;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fecaca;
   align-self: center;
 }
 
@@ -274,10 +309,11 @@ button:disabled {
   border-radius: 18px;
   padding: 14px;
   border: 1px solid var(--border);
-  background: #fff7ea;
+  background: #111827;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 
 .account-card header {
@@ -292,18 +328,28 @@ button:disabled {
   padding: 4px 10px;
   font-size: 12px;
   font-weight: 600;
-  background: #efe6d7;
+  background: #1f2937;
   color: var(--muted);
 }
 
 .account-card[data-status="success"] .badge {
-  background: #d7efe2;
-  color: #2f6d4a;
+  background: rgba(34, 197, 94, 0.15);
+  color: #86efac;
 }
 
 .account-card[data-status="fail"] .badge {
-  background: #f6d8d5;
-  color: #9e3a2e;
+  background: rgba(239, 68, 68, 0.15);
+  color: #fecaca;
+}
+
+.account-card[data-status="success"] {
+  border-color: rgba(34, 197, 94, 0.5);
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.15);
+}
+
+.account-card[data-status="fail"] {
+  border-color: rgba(239, 68, 68, 0.45);
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.12);
 }
 
 .account-metrics {
@@ -313,7 +359,7 @@ button:disabled {
 }
 
 .account-metrics div {
-  background: #fff;
+  background: #0f172a;
   border: 1px dashed var(--border);
   border-radius: 12px;
   padding: 8px 10px;
@@ -336,7 +382,7 @@ button:disabled {
   gap: 6px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: #fff;
+  background: #0f172a;
   border: 1px dashed var(--border);
   max-height: 140px;
   overflow-y: auto;
@@ -350,11 +396,11 @@ button:disabled {
 }
 
 .history-item.positive {
-  color: #2f6d4a;
+  color: #22c55e;
 }
 
 .history-item.negative {
-  color: #9e3a2e;
+  color: #ef4444;
 }
 
 .log-entry {
