@@ -169,6 +169,11 @@ input {
   margin-top: 12px;
 }
 
+.model-label {
+  align-self: center;
+  font-weight: 600;
+}
+
 button {
   border: none;
   border-radius: 999px;

@@ -4,6 +4,7 @@ const addTradeCushionBtn = document.getElementById('addTradeCushion');
 const addTradeSaqueBtn = document.getElementById('addTradeSaque');
 const modelDefaultBtn = document.getElementById('modelDefault');
 const modelScaledBtn = document.getElementById('modelScaled');
+const modelLabel = document.getElementById('modelLabel');
 const startAllBtn = document.getElementById('startAll');
 const stopAllBtn = document.getElementById('stopAll');
 const resetAllBtn = document.getElementById('resetAll');
@@ -36,6 +37,7 @@ const reportSaqueEl = document.getElementById('reportSaque');
 const reportInvestedEl = document.getElementById('reportInvested');
 const reportReturnEl = document.getElementById('reportReturn');
 const reportRoiEl = document.getElementById('reportRoi');
+const reportTradesEl = document.getElementById('reportTrades');
 
 let approvalTimer = null;
 let cushionTimer = null;
@@ -136,6 +138,10 @@ function setTradesFor(container, trades) {
   container.innerHTML = '';
   trades.forEach((trade) => addTradeTo(container, trade));
   updateAllProbabilities(container);
+}
+
+function setModelLabel(text) {
+  modelLabel.textContent = `Modelo atual: ${text}`;
 }
 
 function createPhaseState(initialStatus) {
@@ -274,6 +280,15 @@ function updateSessionFinance() {
   const roi = invested === 0 ? 0 : (profit / invested) * 100;
   reportRoiEl.textContent = `${roi.toFixed(2).replace('.', ',')}%`;
   reportRoiEl.style.color = roi >= 0 ? '#2f6d4a' : '#9e3a2e';
+  const totalTrades = accounts.reduce((sum, account) => {
+    return (
+      sum +
+      account.approval.tradeIndex +
+      account.cushion.tradeIndex +
+      account.saque.tradeIndex
+    );
+  }, 0);
+  reportTradesEl.textContent = String(totalTrades);
 }
 
 function renderAccounts(phaseKey) {
@@ -684,6 +699,7 @@ modelDefaultBtn.addEventListener('click', () => {
     { risk: 250, reward: 250 },
     { risk: 250, reward: 250 },
   ]);
+  setModelLabel('padrão');
 });
 modelScaledBtn.addEventListener('click', () => {
   setTradesFor(tradesEl, [
@@ -703,6 +719,7 @@ modelScaledBtn.addEventListener('click', () => {
     { risk: 2500, reward: 250 },
     { risk: 2750, reward: 250 },
   ]);
+  setModelLabel('escalonável');
 });
 startAllBtn.addEventListener('click', startSimulationFlow);
 stopAllBtn.addEventListener('click', stopSimulationFlow);
@@ -733,3 +750,4 @@ addTradeTo(tradesSaqueEl, { risk: 250, reward: 250 });
 addTradeTo(tradesSaqueEl, { risk: 250, reward: 250 });
 addTradeTo(tradesSaqueEl, { risk: 250, reward: 250 });
 addTradeTo(tradesSaqueEl, { risk: 250, reward: 250 });
+setModelLabel('padrão');
