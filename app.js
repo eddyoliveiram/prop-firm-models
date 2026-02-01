@@ -49,6 +49,7 @@ const reportBoughtEl = document.getElementById('reportBought');
 const reportApprovalEl = document.getElementById('reportApproval');
 const reportCushionEl = document.getElementById('reportCushion');
 const reportSaqueEl = document.getElementById('reportSaque');
+const reportPayoutsEl = document.getElementById('reportPayouts');
 const reportInvestedEl = document.getElementById('reportInvested');
 const reportReturnEl = document.getElementById('reportReturn');
 const reportRoiEl = document.getElementById('reportRoi');
@@ -68,6 +69,7 @@ let totalTrades = 0;
 let totalApprovalPass = 0;
 let totalCushionPass = 0;
 let totalSaquePass = 0;
+let totalPayouts = 0;
 
 const PHASES = {
   approval: {
@@ -236,6 +238,7 @@ function resetSimulation() {
   totalApprovalPass = 0;
   totalCushionPass = 0;
   totalSaquePass = 0;
+  totalPayouts = 0;
   purchaseAccounts(count);
 
   renderAccounts('approval');
@@ -418,6 +421,7 @@ function updateSessionFinance() {
   reportApprovalEl.textContent = String(totalApprovalPass);
   reportCushionEl.textContent = String(totalCushionPass);
   reportSaqueEl.textContent = String(totalSaquePass);
+  reportPayoutsEl.textContent = String(totalPayouts);
   reportInvestedEl.textContent = formatUSD(invested);
   reportReturnEl.textContent = formatUSD(returned);
   const roi = invested === 0 ? 0 : (profit / invested) * 100;
@@ -826,6 +830,7 @@ function runSaqueStep() {
         totalSaquePass += 1;
       }
       account.payoutCount += 1;
+      totalPayouts += 1;
       totalReturned += payout;
       account.saque.equity = 0;
       account.saque.peak = 0;
