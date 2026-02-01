@@ -108,6 +108,28 @@ h1 {
   width: 100%;
 }
 
+.subcard {
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: #0f172a;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.subcard .trades {
+  margin-top: 4px;
+}
+
+.subcard.disabled {
+  opacity: 0.6;
+  filter: grayscale(0.7);
+  border-color: rgba(239, 68, 68, 0.5);
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.2);
+}
+
 .card.disabled {
   opacity: 0.45;
   filter: grayscale(0.6);
@@ -117,6 +139,11 @@ h1 {
 h2 {
   margin: 0 0 16px;
   font-size: 22px;
+}
+
+h3 {
+  margin: 0;
+  font-size: 16px;
 }
 
 .field {

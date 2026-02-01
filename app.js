@@ -4,7 +4,6 @@ const addTradeCushionBtn = document.getElementById('addTradeCushion');
 const addTradeSaqueBtn = document.getElementById('addTradeSaque');
 const modelDefaultInput = document.getElementById('modelDefault');
 const modelScaledInput = document.getElementById('modelScaled');
-const startAllBtn = document.getElementById('startAll');
 const stopAllBtn = document.getElementById('stopAll');
 const resetAllBtn = document.getElementById('resetAll');
 const resetKeepSaqueBtn = document.getElementById('resetKeepSaque');
@@ -24,6 +23,9 @@ const targetSaqueInput = document.getElementById('targetSaque');
 const ddSaqueInput = document.getElementById('ddSaque');
 const ddTypeSaqueTrailing = document.getElementById('ddTypeSaqueTrailing');
 const ddTypeSaqueStatic = document.getElementById('ddTypeSaqueStatic');
+const targetSaquePostInput = document.getElementById('targetSaquePost');
+const ddSaquePostInput = document.getElementById('ddSaquePost');
+const enableSaquePostInput = document.getElementById('enableSaquePost');
 const speedInput = document.getElementById('speed');
 const accountsInput = document.getElementById('accounts');
 const accountValueInput = document.getElementById('accountValue');
@@ -31,6 +33,9 @@ const payoutInput = document.getElementById('payout');
 const tradesEl = document.getElementById('trades');
 const tradesCushionEl = document.getElementById('tradesCushion');
 const tradesSaqueEl = document.getElementById('tradesSaque');
+const tradesSaquePostEl = document.getElementById('tradesSaquePost');
+const addTradeSaquePostBtn = document.getElementById('addTradeSaquePost');
+const saquePostCard = document.getElementById('saquePostCard');
 const accountsGridApproval = document.getElementById('accountsGridApproval');
 const accountsGridCushion = document.getElementById('accountsGridCushion');
 const accountsGridSaque = document.getElementById('accountsGridSaque');
@@ -167,6 +172,10 @@ function isCushionEnabled() {
   return enableCushionInput.checked;
 }
 
+function isSaquePostEnabled() {
+  return enableSaquePostInput.checked;
+}
+
 function updateCushionDisabledState() {
   const disabled = !isCushionEnabled();
   if (cushionConfigCard) {
@@ -176,6 +185,13 @@ function updateCushionDisabledState() {
     if (!card) return;
     card.classList.toggle('disabled', disabled);
   });
+}
+
+function updateSaquePostDisabledState() {
+  const disabled = !isSaquePostEnabled();
+  if (saquePostCard) {
+    saquePostCard.classList.toggle('disabled', disabled);
+  }
 }
 
 function createPhaseState(initialStatus) {
@@ -380,8 +396,7 @@ function updateSessionFinance() {
 }
 
 function updateResetKeepSaqueState() {
-  const hasSaqueWinners = totalSaquePass > 0;
-  resetKeepSaqueBtn.disabled = !hasSaqueWinners;
+  // Iniciar novo ciclo fica sempre habilitado.
 }
 
 function renderAccounts(phaseKey) {
@@ -433,7 +448,7 @@ function renderAccounts(phaseKey) {
         </div>
         <div>
           <span>Limite</span>
-          <strong>${formatMoney(getBreakPoint(phaseKey, phaseState))}</strong>
+          <strong>${formatMoney(getBreakPointForAccount(phaseKey, phaseState, account))}</strong>
         </div>
         ${phaseKey === 'saque'
           ? `<div><span>Saques</span><strong class="saque-count">${account.payoutCount}</strong></div>`
@@ -470,7 +485,7 @@ function updateAccountCard(phaseKey, accountId) {
   metrics[0].textContent = formatMoney(phaseState.equity);
   metrics[1].textContent = formatMoney(phaseState.peak);
   metrics[2].textContent = phaseState.lastDelta === 0 ? '-' : formatMoney(phaseState.lastDelta);
-  metrics[3].textContent = formatMoney(getBreakPoint(phaseKey, phaseState));
+  metrics[3].textContent = formatMoney(getBreakPointForAccount(phaseKey, phaseState, account));
   const saqueCount = card.querySelector('.saque-count');
   if (saqueCount) {
     saqueCount.textContent = String(account.payoutCount);
@@ -499,6 +514,27 @@ function getBreakPoint(phaseKey, phaseState) {
     return dd;
   }
   return phaseState.peak + dd;
+}
+
+function getBreakPointForAccount(phaseKey, phaseState, account) {
+  if (phaseKey === 'saque' && account.payoutCount > 0 && isSaquePostEnabled()) {
+    return Number(ddSaquePostInput.value) || 0;
+  }
+  return getBreakPoint(phaseKey, phaseState);
+}
+
+function getSaqueTradesForAccount(account) {
+  if (account.payoutCount > 0 && isSaquePostEnabled()) {
+    return getTradesFrom(tradesSaquePostEl);
+  }
+  return getTradesFrom(tradesSaqueEl);
+}
+
+function getSaqueTargetForAccount(account) {
+  if (account.payoutCount > 0 && isSaquePostEnabled()) {
+    return Number(targetSaquePostInput.value) || 0;
+  }
+  return Number(targetSaqueInput.value) || 0;
 }
 
 function breakLabel(account) {
@@ -709,11 +745,6 @@ function runCushionStep() {
 }
 
 function runSaqueStep() {
-  const trades = getTradesFrom(tradesSaqueEl);
-  if (trades.length === 0) return;
-
-  const target = Number(targetSaqueInput.value) || 0;
-  const dd = Number(ddSaqueInput.value) || 0;
   const payout = Number(payoutInput.value) || 0;
   const activeAccounts = accounts.filter((account) => {
     const eligible = isCushionEnabled()
@@ -735,6 +766,8 @@ function runSaqueStep() {
     if (!eligible) return;
     if (account.saque.status !== 'active') return;
 
+    const trades = getSaqueTradesForAccount(account);
+    if (trades.length === 0) return;
     const trade = trades[account.saque.tradeIndex % trades.length];
     const win = Math.random() < trade.prob;
     const delta = win ? trade.reward : -trade.risk;
@@ -750,11 +783,12 @@ function runSaqueStep() {
       label: win ? 'Trade vencedor' : 'Trade perdedor',
     });
 
-    const breakPoint = getBreakPoint('saque', account.saque);
+    const breakPoint = getBreakPointForAccount('saque', account.saque, account);
     saqueTradesExecuted += 1;
     totalTrades += 1;
 
-    if (account.saque.equity >= target) {
+    const targetForAccount = getSaqueTargetForAccount(account);
+    if (account.saque.equity >= targetForAccount) {
       if (!account.saqueReached) {
         account.saqueReached = true;
         totalSaquePass += 1;
@@ -797,7 +831,6 @@ function startApproval() {
   if (approvalTimer) return;
   const speed = Math.max(0.1, Number(speedInput.value) || 0.1);
   approvalTimer = setInterval(runApprovalStep, speed * 1000);
-  startAllBtn.disabled = true;
   stopAllBtn.disabled = false;
   setStatus('Executando Fase de Aprovação…', 'running');
 }
@@ -807,7 +840,6 @@ function stopApproval() {
   clearInterval(approvalTimer);
   approvalTimer = null;
   if (!cushionTimer && !saqueTimer) {
-    startAllBtn.disabled = false;
     stopAllBtn.disabled = true;
   }
 }
@@ -826,7 +858,6 @@ function startCushion() {
   updateRunInfoCushion();
   const speed = Math.max(0.1, Number(speedInput.value) || 0.1);
   cushionTimer = setInterval(runCushionStep, speed * 1000);
-  startAllBtn.disabled = true;
   stopAllBtn.disabled = false;
   setStatus('Executando Fase Colchão…', 'running');
 }
@@ -836,7 +867,6 @@ function stopCushion() {
   clearInterval(cushionTimer);
   cushionTimer = null;
   if (!approvalTimer && !saqueTimer) {
-    startAllBtn.disabled = false;
     stopAllBtn.disabled = true;
   }
 }
@@ -856,7 +886,6 @@ function startSaque() {
   updateRunInfoSaque();
   const speed = Math.max(0.1, Number(speedInput.value) || 0.1);
   saqueTimer = setInterval(runSaqueStep, speed * 1000);
-  startAllBtn.disabled = true;
   stopAllBtn.disabled = false;
   setStatus('Executando Fase Saque…', 'running');
 }
@@ -866,7 +895,6 @@ function stopSaque() {
   clearInterval(saqueTimer);
   saqueTimer = null;
   if (!approvalTimer && !cushionTimer) {
-    startAllBtn.disabled = false;
     stopAllBtn.disabled = true;
   }
 }
@@ -874,6 +902,14 @@ function stopSaque() {
 function startSimulationFlow() {
   if (approvalTimer || cushionTimer || saqueTimer) return;
   startApproval();
+}
+
+function startNewCycle() {
+  if (approvalTimer || cushionTimer || saqueTimer) return;
+  if (totalSaquePass > 0) {
+    resetKeepingSaque();
+  }
+  startSimulationFlow();
 }
 
 function stopSimulationFlow() {
@@ -885,6 +921,7 @@ function stopSimulationFlow() {
 addTradeBtn.addEventListener('click', () => addTradeTo(tradesEl));
 addTradeCushionBtn.addEventListener('click', () => addTradeTo(tradesCushionEl, { risk: 2000, reward: 2000 }));
 addTradeSaqueBtn.addEventListener('click', () => addTradeTo(tradesSaqueEl, { risk: 250, reward: 250 }));
+addTradeSaquePostBtn.addEventListener('click', () => addTradeTo(tradesSaquePostEl, { risk: 1400, reward: 300 }));
 function applyModelDefault() {
   setTradesFor(tradesEl, [
     { risk: 1000, reward: 1000 },
@@ -897,6 +934,13 @@ function applyModelDefault() {
     { risk: 250, reward: 250 },
     { risk: 250, reward: 250 },
     { risk: 250, reward: 250 },
+  ]);
+  setTradesFor(tradesSaquePostEl, [
+    { risk: 1400, reward: 300 },
+    { risk: 1700, reward: 300 },
+    { risk: 2000, reward: 300 },
+    { risk: 2300, reward: 300 },
+    { risk: 2600, reward: 300 },
   ]);
 }
 
@@ -918,6 +962,13 @@ function applyModelScaled() {
     { risk: 2500, reward: 250 },
     { risk: 2750, reward: 250 },
   ]);
+  setTradesFor(tradesSaquePostEl, [
+    { risk: 1400, reward: 300 },
+    { risk: 1700, reward: 300 },
+    { risk: 2000, reward: 300 },
+    { risk: 2300, reward: 300 },
+    { risk: 2600, reward: 300 },
+  ]);
 }
 
 modelDefaultInput.addEventListener('change', () => {
@@ -926,16 +977,13 @@ modelDefaultInput.addEventListener('change', () => {
 modelScaledInput.addEventListener('change', () => {
   if (modelScaledInput.checked) applyModelScaled();
 });
-startAllBtn.addEventListener('click', startSimulationFlow);
 stopAllBtn.addEventListener('click', stopSimulationFlow);
 resetAllBtn.addEventListener('click', () => {
   stopSimulationFlow();
   resetSimulation();
 });
 resetKeepSaqueBtn.addEventListener('click', () => {
-  stopSimulationFlow();
-  resetKeepingSaque();
-  startSimulationFlow();
+  startNewCycle();
 });
 
 [
@@ -951,6 +999,8 @@ resetKeepSaqueBtn.addEventListener('click', () => {
   ddSaqueInput,
   ddTypeSaqueTrailing,
   ddTypeSaqueStatic,
+  targetSaquePostInput,
+  ddSaquePostInput,
 ].forEach((input) => {
   input.addEventListener('change', updateStats);
 });
@@ -975,7 +1025,13 @@ accountsInput.addEventListener('input', () => {
   input.addEventListener('input', updateStats);
 });
 
+enableSaquePostInput.addEventListener('change', () => {
+  updateSaquePostDisabledState();
+  updateStats();
+});
+
 resetSimulation();
 applyModelScaled();
 updateCushionDisabledState();
 updateResetKeepSaqueState();
+updateSaquePostDisabledState();

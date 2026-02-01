@@ -159,6 +159,29 @@
         </div>
         <p class="muted">Preencha risco e retorno. A taxa de acerto assume EV neutro.</p>
         <div id="tradesSaque" class="trades"></div>
+        <div class="subcard" id="saquePostCard">
+          <div class="row">
+            <h3>Após o 1º saque</h3>
+            <label class="radio">
+              <input type="checkbox" id="enableSaquePost" checked />
+              Habilitar
+            </label>
+          </div>
+          <div class="field">
+            <label for="targetSaquePost">Objetivo (R$)</label>
+            <input id="targetSaquePost" type="number" step="100" value="1500" />
+          </div>
+          <div class="field">
+            <label for="ddSaquePost">Drawdown estático (R$)</label>
+            <input id="ddSaquePost" type="number" step="100" value="-1400" />
+          </div>
+          <div class="row">
+            <h3>Trades pós-saque</h3>
+            <button id="addTradeSaquePost" class="ghost">+ Adicionar trade</button>
+          </div>
+          <p class="muted">Configuração aplicada somente após o primeiro saque da conta.</p>
+          <div id="tradesSaquePost" class="trades"></div>
+        </div>
       </div>
     </section>
 
@@ -179,10 +202,9 @@
           </div>
         </div>
         <div class="actions">
-          <button id="startAll" class="primary">Iniciar simulação</button>
+          <button id="resetKeepSaque" class="primary">Iniciar novo ciclo</button>
           <button id="stopAll" class="ghost" disabled>Parar</button>
           <button id="resetAll" class="ghost danger">Resetar</button>
-          <button id="resetKeepSaque" class="ghost success">Iniciar novo ciclo</button>
         </div>
       </div>
     </section>
