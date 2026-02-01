@@ -165,15 +165,24 @@
     <section class="panel">
       <div class="card full">
         <h2>Controles da simulação</h2>
-        <div class="actions">
-          <button id="modelDefault" class="ghost">Modelo padrão</button>
-          <button id="modelScaled" class="ghost">Modelo Escalonável</button>
-          <span id="modelLabel" class="model-label muted">Modelo atual: padrão</span>
+        <div class="field">
+          <label>Modelo de trades</label>
+          <div class="radio-group">
+            <label class="radio">
+              <input type="radio" name="tradeModel" id="modelScaled" value="scaled" checked />
+              Modelo Escalonável
+            </label>
+            <label class="radio">
+              <input type="radio" name="tradeModel" id="modelDefault" value="default" />
+              Modelo padrão
+            </label>
+          </div>
         </div>
         <div class="actions">
           <button id="startAll" class="primary">Iniciar simulação</button>
           <button id="stopAll" class="ghost" disabled>Parar</button>
-          <button id="resetAll" class="ghost">Resetar</button>
+          <button id="resetAll" class="ghost danger">Resetar</button>
+          <button id="resetKeepSaque" class="ghost success">Iniciar novo ciclo</button>
         </div>
       </div>
     </section>

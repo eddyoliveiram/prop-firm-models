@@ -2,12 +2,12 @@
 const addTradeBtn = document.getElementById('addTrade');
 const addTradeCushionBtn = document.getElementById('addTradeCushion');
 const addTradeSaqueBtn = document.getElementById('addTradeSaque');
-const modelDefaultBtn = document.getElementById('modelDefault');
-const modelScaledBtn = document.getElementById('modelScaled');
-const modelLabel = document.getElementById('modelLabel');
+const modelDefaultInput = document.getElementById('modelDefault');
+const modelScaledInput = document.getElementById('modelScaled');
 const startAllBtn = document.getElementById('startAll');
 const stopAllBtn = document.getElementById('stopAll');
 const resetAllBtn = document.getElementById('resetAll');
+const resetKeepSaqueBtn = document.getElementById('resetKeepSaque');
 const targetInput = document.getElementById('target');
 const ddInput = document.getElementById('dd');
 const ddTypeApprovalTrailing = document.getElementById('ddTypeTrailing');
@@ -56,6 +56,13 @@ let accounts = [];
 let approvalTradesExecuted = 0;
 let cushionTradesExecuted = 0;
 let saqueTradesExecuted = 0;
+let totalInvested = 0;
+let totalReturned = 0;
+let totalBought = 0;
+let totalTrades = 0;
+let totalApprovalPass = 0;
+let totalCushionPass = 0;
+let totalSaquePass = 0;
 
 const PHASES = {
   approval: {
@@ -156,10 +163,6 @@ function setTradesFor(container, trades) {
   updateAllProbabilities(container);
 }
 
-function setModelLabel(text) {
-  modelLabel.textContent = `Modelo atual: ${text}`;
-}
-
 function isCushionEnabled() {
   return enableCushionInput.checked;
 }
@@ -186,6 +189,12 @@ function createPhaseState(initialStatus) {
   };
 }
 
+function purchaseAccounts(count) {
+  const accountValue = Number(accountValueInput.value) || 0;
+  totalBought += count;
+  totalInvested += count * accountValue;
+}
+
 function resetSimulation() {
   const count = Math.max(1, Number(accountsInput.value) || 1);
   accounts = Array.from({ length: count }, (_, idx) => ({
@@ -193,11 +202,25 @@ function resetSimulation() {
     approval: createPhaseState('active'),
     cushion: createPhaseState('locked'),
     saque: createPhaseState('locked'),
+    paid: false,
+    payoutCount: 0,
+    lastBreakPhase: null,
+    approvalPassed: false,
+    cushionPassed: false,
+    saqueReached: false,
   }));
 
   approvalTradesExecuted = 0;
   cushionTradesExecuted = 0;
   saqueTradesExecuted = 0;
+  totalInvested = 0;
+  totalReturned = 0;
+  totalBought = 0;
+  totalTrades = 0;
+  totalApprovalPass = 0;
+  totalCushionPass = 0;
+  totalSaquePass = 0;
+  purchaseAccounts(count);
 
   renderAccounts('approval');
   renderAccounts('cushion');
@@ -207,6 +230,48 @@ function resetSimulation() {
   updateRunInfoCushion();
   updateRunInfoSaque();
   setStatus('Pronto para simular', 'ready');
+  updateResetKeepSaqueState();
+}
+
+function resetKeepingSaque() {
+  const targetCount = Math.max(1, Number(accountsInput.value) || 1);
+  const kept = accounts.filter(
+    (account) => account.payoutCount > 0 && account.saque.status !== 'fail'
+  );
+  let nextId = accounts.reduce((maxId, account) => Math.max(maxId, account.id), 0) + 1;
+  const newCount = Math.max(0, targetCount - kept.length);
+  const fresh = Array.from({ length: newCount }, () => ({
+    id: nextId++,
+    approval: createPhaseState('active'),
+    cushion: createPhaseState('locked'),
+    saque: createPhaseState('locked'),
+    paid: false,
+    payoutCount: 0,
+    lastBreakPhase: null,
+    approvalPassed: false,
+    cushionPassed: false,
+    saqueReached: false,
+  }));
+
+  accounts = [...kept, ...fresh];
+
+  approvalTradesExecuted = 0;
+  cushionTradesExecuted = 0;
+  saqueTradesExecuted = 0;
+
+  if (newCount > 0) {
+    purchaseAccounts(newCount);
+  }
+
+  renderAccounts('approval');
+  renderAccounts('cushion');
+  renderAccounts('saque');
+  updateStats();
+  updateRunInfoApproval();
+  updateRunInfoCushion();
+  updateRunInfoSaque();
+  setStatus('Pronto para simular', 'ready');
+  updateResetKeepSaqueState();
 }
 
 function updateStats() {
@@ -268,7 +333,7 @@ function updateRunInfoSaque() {
     : accounts.filter((account) => account.approval.status === 'success');
   const active = eligible.filter((account) => account.saque.status === 'active').length;
   const pending = eligible.filter((account) => account.saque.status === 'pending').length;
-  const success = eligible.filter((account) => account.saque.status === 'success').length;
+  const success = eligible.filter((account) => account.payoutCount > 0).length;
   const fail = eligible.filter((account) => account.saque.status === 'fail').length;
   const tradeCounts = eligible.map((account) => account.saque.tradeIndex);
   const minTrades = tradeCounts.length ? Math.min(...tradeCounts) : 0;
@@ -293,39 +358,30 @@ function setStatus(text, state) {
 }
 
 function updateSessionFinance() {
-  const count = accounts.length;
-  const accountValue = Number(accountValueInput.value) || 0;
   const payout = Number(payoutInput.value) || 0;
-  const approved = accounts.filter((account) => account.saque.status === 'success').length;
-  const invested = count * accountValue;
-  const returned = approved * payout;
+  const returned = totalReturned;
+  const invested = totalInvested;
   const profit = returned - invested;
   investedTotalEl.textContent = formatUSD(invested);
   profitTotalEl.textContent = formatUSD(profit);
   profitTotalEl.style.color = profit >= 0 ? '#2f6d4a' : '#9e3a2e';
 
-  reportBoughtEl.textContent = String(count);
-  reportApprovalEl.textContent = String(
-    accounts.filter((account) => account.approval.status === 'success').length
-  );
-  reportCushionEl.textContent = String(
-    accounts.filter((account) => account.cushion.status === 'success').length
-  );
-  reportSaqueEl.textContent = String(approved);
+  reportBoughtEl.textContent = String(totalBought);
+  reportApprovalEl.textContent = String(totalApprovalPass);
+  reportCushionEl.textContent = String(totalCushionPass);
+  reportSaqueEl.textContent = String(totalSaquePass);
   reportInvestedEl.textContent = formatUSD(invested);
   reportReturnEl.textContent = formatUSD(returned);
   const roi = invested === 0 ? 0 : (profit / invested) * 100;
   reportRoiEl.textContent = `${roi.toFixed(2).replace('.', ',')}%`;
   reportRoiEl.style.color = roi >= 0 ? '#2f6d4a' : '#9e3a2e';
-  const totalTrades = accounts.reduce((sum, account) => {
-    return (
-      sum +
-      account.approval.tradeIndex +
-      account.cushion.tradeIndex +
-      account.saque.tradeIndex
-    );
-  }, 0);
   reportTradesEl.textContent = String(totalTrades);
+  updateResetKeepSaqueState();
+}
+
+function updateResetKeepSaqueState() {
+  const hasSaqueWinners = totalSaquePass > 0;
+  resetKeepSaqueBtn.disabled = !hasSaqueWinners;
 }
 
 function renderAccounts(phaseKey) {
@@ -333,6 +389,10 @@ function renderAccounts(phaseKey) {
   const container = phase.accountsGrid;
   container.innerHTML = '';
   const toRender = accounts.filter((account) => {
+    if (phaseKey === 'approval') {
+      if (account.payoutCount > 0 && account.saque.status !== 'fail') return false;
+      return true;
+    }
     if (phaseKey === 'cushion') {
       if (!isCushionEnabled()) return false;
       return account.approval.status === 'success';
@@ -354,9 +414,10 @@ function renderAccounts(phaseKey) {
     card.innerHTML = `
       <header>
         <strong>Conta ${account.id}</strong>
-        <span class="badge">${statusLabel(phaseKey, phaseState.status)}</span>
+        <span class="badge">${statusLabel(phaseKey, phaseState.status, account)}</span>
       </header>
       <p class="muted">Fase atual: ${phase.name}</p>
+      <p class="muted break-info">${breakLabel(account)}</p>
       <div class="account-metrics">
         <div>
           <span>Acumulado</span>
@@ -374,6 +435,9 @@ function renderAccounts(phaseKey) {
           <span>Limite</span>
           <strong>${formatMoney(getBreakPoint(phaseKey, phaseState))}</strong>
         </div>
+        ${phaseKey === 'saque'
+          ? `<div><span>Saques</span><strong class="saque-count">${account.payoutCount}</strong></div>`
+          : ''}
       </div>
       <div class="account-history" aria-label="Histórico de trades">
         <div class="history-header">
@@ -396,12 +460,21 @@ function updateAccountCard(phaseKey, accountId) {
   if (!account) return;
   const phaseState = account[phaseKey];
   card.dataset.status = phaseState.status;
-  card.querySelector('.badge').textContent = statusLabel(phaseKey, phaseState.status);
+  card.querySelector('.badge').textContent = statusLabel(phaseKey, phaseState.status, account);
+  const breakInfo = card.querySelector('.break-info');
+  if (breakInfo) {
+    breakInfo.textContent = breakLabel(account);
+    breakInfo.style.display = breakInfo.textContent ? 'block' : 'none';
+  }
   const metrics = card.querySelectorAll('.account-metrics strong');
   metrics[0].textContent = formatMoney(phaseState.equity);
   metrics[1].textContent = formatMoney(phaseState.peak);
   metrics[2].textContent = phaseState.lastDelta === 0 ? '-' : formatMoney(phaseState.lastDelta);
   metrics[3].textContent = formatMoney(getBreakPoint(phaseKey, phaseState));
+  const saqueCount = card.querySelector('.saque-count');
+  if (saqueCount) {
+    saqueCount.textContent = String(account.payoutCount);
+  }
   const historyEl = card.querySelector('.account-history');
   const dotsEl = historyEl.querySelector('.history-dots');
   const countEl = historyEl.querySelector('.history-count');
@@ -428,9 +501,19 @@ function getBreakPoint(phaseKey, phaseState) {
   return phaseState.peak + dd;
 }
 
-function statusLabel(phaseKey, status) {
-  if (status === 'success') return 'Aprovada';
-  if (status === 'fail') return 'Quebrada';
+function breakLabel(account) {
+  if (!account.lastBreakPhase) return '';
+  const phaseName = PHASES[account.lastBreakPhase]?.name || account.lastBreakPhase;
+  return `Quebrou na ${phaseName}`;
+}
+
+function statusLabel(phaseKey, status, account) {
+  if (status === 'fail') {
+    return breakLabel(account) || 'Quebrada';
+  }
+  if (phaseKey === 'saque' && account.payoutCount > 0) {
+    return `Saque ${account.payoutCount}x`;
+  }
   if (phaseKey === 'cushion' && status === 'pending') return 'Pendente';
   if (phaseKey === 'cushion' && status === 'locked') return 'Bloqueada';
   if (phaseKey === 'saque' && status === 'pending') return 'Pendente';
@@ -472,15 +555,21 @@ function runApprovalStep() {
 
     const breakPoint = getBreakPoint('approval', account.approval);
     approvalTradesExecuted += 1;
+    totalTrades += 1;
 
     if (account.approval.equity >= target) {
       account.approval.status = 'success';
+      if (!account.approvalPassed) {
+        account.approvalPassed = true;
+        totalApprovalPass += 1;
+      }
       if (account.cushion.status === 'locked') {
         account.cushion.status = 'pending';
         hasNewApproval = true;
       }
     } else if (account.approval.equity <= breakPoint) {
       account.approval.status = 'fail';
+      account.lastBreakPhase = 'approval';
     }
 
     updateAccountCard('approval', account.id);
@@ -568,15 +657,21 @@ function runCushionStep() {
 
     const breakPoint = getBreakPoint('cushion', account.cushion);
     cushionTradesExecuted += 1;
+    totalTrades += 1;
 
     if (account.cushion.equity >= target) {
       account.cushion.status = 'success';
+      if (!account.cushionPassed) {
+        account.cushionPassed = true;
+        totalCushionPass += 1;
+      }
       if (account.saque.status === 'locked') {
         account.saque.status = 'pending';
         hasNewApproval = true;
       }
     } else if (account.cushion.equity <= breakPoint) {
       account.cushion.status = 'fail';
+      account.lastBreakPhase = 'cushion';
     }
 
     updateAccountCard('cushion', account.id);
@@ -619,6 +714,7 @@ function runSaqueStep() {
 
   const target = Number(targetSaqueInput.value) || 0;
   const dd = Number(ddSaqueInput.value) || 0;
+  const payout = Number(payoutInput.value) || 0;
   const activeAccounts = accounts.filter((account) => {
     const eligible = isCushionEnabled()
       ? account.cushion.status === 'success'
@@ -656,11 +752,24 @@ function runSaqueStep() {
 
     const breakPoint = getBreakPoint('saque', account.saque);
     saqueTradesExecuted += 1;
+    totalTrades += 1;
 
     if (account.saque.equity >= target) {
-      account.saque.status = 'success';
+      if (!account.saqueReached) {
+        account.saqueReached = true;
+        totalSaquePass += 1;
+      }
+      account.payoutCount += 1;
+      totalReturned += payout;
+      account.saque.equity = 0;
+      account.saque.peak = 0;
+      account.saque.lastDelta = 0;
+      account.saque.tradeIndex = 0;
+      account.saque.history = [];
+      account.saque.status = 'active';
     } else if (account.saque.equity <= breakPoint) {
       account.saque.status = 'fail';
+      account.lastBreakPhase = 'saque';
     }
 
     updateAccountCard('saque', account.id);
@@ -776,7 +885,7 @@ function stopSimulationFlow() {
 addTradeBtn.addEventListener('click', () => addTradeTo(tradesEl));
 addTradeCushionBtn.addEventListener('click', () => addTradeTo(tradesCushionEl, { risk: 2000, reward: 2000 }));
 addTradeSaqueBtn.addEventListener('click', () => addTradeTo(tradesSaqueEl, { risk: 250, reward: 250 }));
-modelDefaultBtn.addEventListener('click', () => {
+function applyModelDefault() {
   setTradesFor(tradesEl, [
     { risk: 1000, reward: 1000 },
     { risk: 1000, reward: 1000 },
@@ -789,9 +898,9 @@ modelDefaultBtn.addEventListener('click', () => {
     { risk: 250, reward: 250 },
     { risk: 250, reward: 250 },
   ]);
-  setModelLabel('padrão');
-});
-modelScaledBtn.addEventListener('click', () => {
+}
+
+function applyModelScaled() {
   setTradesFor(tradesEl, [
     { risk: 2000, reward: 500 },
     { risk: 2500, reward: 500 },
@@ -809,13 +918,24 @@ modelScaledBtn.addEventListener('click', () => {
     { risk: 2500, reward: 250 },
     { risk: 2750, reward: 250 },
   ]);
-  setModelLabel('escalonável');
+}
+
+modelDefaultInput.addEventListener('change', () => {
+  if (modelDefaultInput.checked) applyModelDefault();
+});
+modelScaledInput.addEventListener('change', () => {
+  if (modelScaledInput.checked) applyModelScaled();
 });
 startAllBtn.addEventListener('click', startSimulationFlow);
 stopAllBtn.addEventListener('click', stopSimulationFlow);
 resetAllBtn.addEventListener('click', () => {
   stopSimulationFlow();
   resetSimulation();
+});
+resetKeepSaqueBtn.addEventListener('click', () => {
+  stopSimulationFlow();
+  resetKeepingSaque();
+  startSimulationFlow();
 });
 
 [
@@ -856,13 +976,6 @@ accountsInput.addEventListener('input', () => {
 });
 
 resetSimulation();
-addTradeTo(tradesEl);
-addTradeTo(tradesEl);
-addTradeTo(tradesEl);
-addTradeTo(tradesCushionEl, { risk: 2000, reward: 2000 });
-addTradeTo(tradesSaqueEl, { risk: 250, reward: 250 });
-addTradeTo(tradesSaqueEl, { risk: 250, reward: 250 });
-addTradeTo(tradesSaqueEl, { risk: 250, reward: 250 });
-addTradeTo(tradesSaqueEl, { risk: 250, reward: 250 });
-setModelLabel('padrão');
+applyModelScaled();
 updateCushionDisabledState();
+updateResetKeepSaqueState();
