@@ -249,6 +249,38 @@ function resetSimulation() {
   updateResetKeepSaqueState();
 }
 
+function resetCycleFresh() {
+  const count = Math.max(1, Number(accountsInput.value) || 1);
+  accounts = Array.from({ length: count }, (_, idx) => ({
+    id: idx + 1,
+    approval: createPhaseState('active'),
+    cushion: createPhaseState('locked'),
+    saque: createPhaseState('locked'),
+    paid: false,
+    payoutCount: 0,
+    lastBreakPhase: null,
+    approvalPassed: false,
+    cushionPassed: false,
+    saqueReached: false,
+  }));
+
+  approvalTradesExecuted = 0;
+  cushionTradesExecuted = 0;
+  saqueTradesExecuted = 0;
+
+  purchaseAccounts(count);
+
+  renderAccounts('approval');
+  renderAccounts('cushion');
+  renderAccounts('saque');
+  updateStats();
+  updateRunInfoApproval();
+  updateRunInfoCushion();
+  updateRunInfoSaque();
+  setStatus('Pronto para simular', 'ready');
+  updateResetKeepSaqueState();
+}
+
 function resetKeepingSaque() {
   const targetCount = Math.max(1, Number(accountsInput.value) || 1);
   const kept = accounts.filter(
@@ -908,6 +940,8 @@ function startNewCycle() {
   if (approvalTimer || cushionTimer || saqueTimer) return;
   if (totalSaquePass > 0) {
     resetKeepingSaque();
+  } else {
+    resetCycleFresh();
   }
   startSimulationFlow();
 }
