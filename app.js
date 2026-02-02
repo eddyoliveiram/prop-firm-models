@@ -271,6 +271,15 @@ function resetCycleFresh() {
   cushionTradesExecuted = 0;
   saqueTradesExecuted = 0;
 
+  totalInvested = 0;
+  totalReturned = 0;
+  totalBought = 0;
+  totalTrades = 0;
+  totalApprovalPass = 0;
+  totalCushionPass = 0;
+  totalSaquePass = 0;
+  totalPayouts = 0;
+
   purchaseAccounts(count);
 
   renderAccounts('approval');
