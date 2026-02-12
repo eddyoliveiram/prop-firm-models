@@ -17,6 +17,20 @@
 
     <section class="panel">
       <div class="card full">
+        <h2>Pré-definições</h2>
+        <div class="field">
+          <label for="presetModel">Selecione a pré-definição</label>
+          <select id="presetModel">
+            <option value="lucid50k_jota" selected>LUCID 50k [Modelo JOTA]</option>
+            <option value="lucid50k_1350">LUCID 50k [Saque 1.5k => $1.350]</option>
+            <option value="lucid50k_900">LUCID 50K [Saque 1k => $900]</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="card full">
         <h2>Configuração da sessão</h2>
         <div class="field">
           <label for="accounts">Número de contas na sessão</label>
@@ -24,11 +38,11 @@
         </div>
         <div class="field">
           <label for="accountValue">Valor da conta (US$)</label>
-          <input id="accountValue" type="number" step="1" min="0" value="90" />
+          <input id="accountValue" type="number" step="1" min="0" value="78" />
         </div>
         <div class="field">
-          <label for="payout">Payout por aprovação (US$)</label>
-          <input id="payout" type="number" step="1" min="0" value="1500" />
+          <label for="payout">Payout já descontando a % da mesa (US$)</label>
+          <input id="payout" type="number" step="1" min="0" value="1350" />
         </div>
       </div>
     </section>
@@ -177,19 +191,6 @@
     <section class="panel">
       <div class="card full">
         <h2>Controles da simulação</h2>
-        <div class="field">
-          <label>Modelo de trades</label>
-          <div class="radio-group">
-            <label class="radio">
-              <input type="radio" name="tradeModel" id="modelScaled" value="scaled" checked />
-              Modelo Escalonável
-            </label>
-            <label class="radio">
-              <input type="radio" name="tradeModel" id="modelDefault" value="default" />
-              Modelo padrão
-            </label>
-          </div>
-        </div>
         <div class="actions">
           <button id="resetKeepSaque" class="primary">Iniciar novo ciclo</button>
           <button id="stopAll" class="ghost" disabled>Parar</button>

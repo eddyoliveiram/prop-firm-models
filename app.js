@@ -2,8 +2,7 @@
 const addTradeBtn = document.getElementById('addTrade');
 const addTradeCushionBtn = document.getElementById('addTradeCushion');
 const addTradeSaqueBtn = document.getElementById('addTradeSaque');
-const modelDefaultInput = document.getElementById('modelDefault');
-const modelScaledInput = document.getElementById('modelScaled');
+const presetModelInput = document.getElementById('presetModel');
 const stopAllBtn = document.getElementById('stopAll');
 const resetAllBtn = document.getElementById('resetAll');
 const resetKeepSaqueBtn = document.getElementById('resetKeepSaque');
@@ -976,29 +975,14 @@ addTradeBtn.addEventListener('click', () => addTradeTo(tradesEl));
 addTradeCushionBtn.addEventListener('click', () => addTradeTo(tradesCushionEl, { risk: 2000, reward: 2000 }));
 addTradeSaqueBtn.addEventListener('click', () => addTradeTo(tradesSaqueEl, { risk: 250, reward: 250 }));
 addTradeSaquePostBtn.addEventListener('click', () => addTradeTo(tradesSaquePostEl, { risk: 1400, reward: 300 }));
-function applyModelDefault() {
-  setTradesFor(tradesEl, [
-    { risk: 1000, reward: 1000 },
-    { risk: 1000, reward: 1000 },
-    { risk: 1000, reward: 1000 },
-  ]);
-  setTradesFor(tradesCushionEl, [{ risk: 2000, reward: 2000 }]);
-  setTradesFor(tradesSaqueEl, [
-    { risk: 250, reward: 250 },
-    { risk: 250, reward: 250 },
-    { risk: 250, reward: 250 },
-    { risk: 250, reward: 250 },
-  ]);
-  setTradesFor(tradesSaquePostEl, [
-    { risk: 1400, reward: 300 },
-    { risk: 1700, reward: 300 },
-    { risk: 2000, reward: 300 },
-    { risk: 2300, reward: 300 },
-    { risk: 2600, reward: 300 },
-  ]);
-}
-
-function applyModelScaled() {
+function applyPresetJota() {
+  payoutInput.value = '1350';
+  targetCushionInput.value = '2000';
+  ddCushionInput.value = '-2000';
+  targetSaqueInput.value = '1000';
+  enableSaquePostInput.checked = true;
+  targetSaquePostInput.value = '1500';
+  ddSaquePostInput.value = '-1400';
   setTradesFor(tradesEl, [
     { risk: 2000, reward: 500 },
     { risk: 2500, reward: 500 },
@@ -1012,9 +996,9 @@ function applyModelScaled() {
   ]);
   setTradesFor(tradesSaqueEl, [
     { risk: 2000, reward: 250 },
-    { risk: 2250, reward: 250 },
-    { risk: 2500, reward: 250 },
-    { risk: 2750, reward: 250 },
+    { risk: 2000, reward: 250 },
+    { risk: 2000, reward: 250 },
+    { risk: 2000, reward: 250 },
   ]);
   setTradesFor(tradesSaquePostEl, [
     { risk: 1400, reward: 300 },
@@ -1023,14 +1007,86 @@ function applyModelScaled() {
     { risk: 2300, reward: 300 },
     { risk: 2600, reward: 300 },
   ]);
+  updateSaquePostDisabledState();
+  updateStats();
 }
 
-modelDefaultInput.addEventListener('change', () => {
-  if (modelDefaultInput.checked) applyModelDefault();
-});
-modelScaledInput.addEventListener('change', () => {
-  if (modelScaledInput.checked) applyModelScaled();
-});
+function applyPresetLucid50k() {
+  payoutInput.value = '1350';
+  targetCushionInput.value = '2000';
+  ddCushionInput.value = '-2000';
+  targetSaqueInput.value = '1000';
+  enableSaquePostInput.checked = true;
+  targetSaquePostInput.value = '1500';
+  ddSaquePostInput.value = '-1400';
+  setTradesFor(tradesEl, [
+    { risk: 2000, reward: 1500 },
+    { risk: 2000, reward: 1500 },
+  ]);
+  setTradesFor(tradesCushionEl, [{ risk: 2000, reward: 2000 }]);
+  setTradesFor(tradesSaqueEl, [
+    { risk: 2000, reward: 250 },
+    { risk: 2000, reward: 250 },
+    { risk: 2000, reward: 250 },
+    { risk: 2000, reward: 250 },
+  ]);
+  setTradesFor(tradesSaquePostEl, [
+    { risk: 1400, reward: 300 },
+    { risk: 1700, reward: 300 },
+    { risk: 2000, reward: 300 },
+    { risk: 2300, reward: 300 },
+    { risk: 2600, reward: 300 },
+  ]);
+  updateSaquePostDisabledState();
+  updateStats();
+}
+
+function applyPresetLucid50kSaque900() {
+  payoutInput.value = '900';
+  targetCushionInput.value = '1000';
+  ddCushionInput.value = '-2000';
+  targetSaqueInput.value = '1000';
+  enableSaquePostInput.checked = true;
+  targetSaquePostInput.value = '1000';
+  ddSaquePostInput.value = '-900';
+  setTradesFor(tradesEl, [
+    { risk: 2000, reward: 1500 },
+    { risk: 2000, reward: 1500 },
+  ]);
+  setTradesFor(tradesCushionEl, [{ risk: 2000, reward: 1000 }]);
+  setTradesFor(tradesSaqueEl, [
+    { risk: 2000, reward: 250 },
+    { risk: 2000, reward: 250 },
+    { risk: 2000, reward: 250 },
+    { risk: 2000, reward: 250 },
+  ]);
+  setTradesFor(tradesSaquePostEl, [
+    { risk: 900, reward: 300 },
+    { risk: 1200, reward: 300 },
+    { risk: 1500, reward: 300 },
+    { risk: 1700, reward: 300 },
+    { risk: 1900, reward: 300 },
+  ]);
+  updateSaquePostDisabledState();
+  updateStats();
+}
+
+function applySelectedPreset() {
+  if (!presetModelInput) return;
+  if (presetModelInput.value === 'lucid50k_1350') {
+    applyPresetLucid50k();
+    return;
+  }
+  if (presetModelInput.value === 'lucid50k_900') {
+    applyPresetLucid50kSaque900();
+    return;
+  }
+  applyPresetJota();
+}
+
+if (presetModelInput) {
+  presetModelInput.addEventListener('change', applySelectedPreset);
+}
 stopAllBtn.addEventListener('click', stopSimulationFlow);
 resetAllBtn.addEventListener('click', () => {
   stopSimulationFlow();
@@ -1085,7 +1141,7 @@ enableSaquePostInput.addEventListener('change', () => {
 });
 
 resetSimulation();
-applyModelScaled();
+applySelectedPreset();
 updateCushionDisabledState();
 updateResetKeepSaqueState();
 updateSaquePostDisabledState();
