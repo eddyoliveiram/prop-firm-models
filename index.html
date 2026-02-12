@@ -30,17 +30,6 @@
           <label for="payout">Payout por aprovação (US$)</label>
           <input id="payout" type="number" step="1" min="0" value="1500" />
         </div>
-        <div class="summary session-summary">
-          <div>
-            <span>Investimento total</span>
-            <strong id="investedTotal">US$ 0</strong>
-          </div>
-          <div>
-            <span>Lucro atual</span>
-            <strong id="profitTotal">US$ 0</strong>
-          </div>
-        </div>
-        <p class="muted">Esse valor vale para todas as fases da simulação.</p>
       </div>
     </section>
 
@@ -217,7 +206,7 @@
         </div>
         <div class="summary report-summary">
           <div>
-            <span>Contas compradas</span>
+            <span>Contas compradas (acumulado)</span>
             <strong id="reportBought">0</strong>
           </div>
           <div>
@@ -243,6 +232,10 @@
           <div>
             <span>Retorno</span>
             <strong id="reportReturn">US$ 0</strong>
+          </div>
+          <div>
+            <span>Lucro atual</span>
+            <strong id="reportProfit">US$ 0</strong>
           </div>
           <div>
             <span>ROI</span>

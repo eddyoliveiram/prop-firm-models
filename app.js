@@ -43,8 +43,6 @@ const statusBadge = document.getElementById('statusBadge');
 const runInfoApproval = document.getElementById('runInfoApproval');
 const runInfoCushion = document.getElementById('runInfoCushion');
 const runInfoSaque = document.getElementById('runInfoSaque');
-const investedTotalEl = document.getElementById('investedTotal');
-const profitTotalEl = document.getElementById('profitTotal');
 const reportBoughtEl = document.getElementById('reportBought');
 const reportApprovalEl = document.getElementById('reportApproval');
 const reportCushionEl = document.getElementById('reportCushion');
@@ -52,6 +50,7 @@ const reportSaqueEl = document.getElementById('reportSaque');
 const reportPayoutsEl = document.getElementById('reportPayouts');
 const reportInvestedEl = document.getElementById('reportInvested');
 const reportReturnEl = document.getElementById('reportReturn');
+const reportProfitEl = document.getElementById('reportProfit');
 const reportRoiEl = document.getElementById('reportRoi');
 const reportTradesEl = document.getElementById('reportTrades');
 
@@ -239,7 +238,6 @@ function resetSimulation() {
   totalCushionPass = 0;
   totalSaquePass = 0;
   totalPayouts = 0;
-  purchaseAccounts(count);
 
   renderAccounts('approval');
   renderAccounts('cushion');
@@ -295,9 +293,13 @@ function resetCycleFresh() {
 
 function resetKeepingSaque() {
   const targetCount = Math.max(1, Number(accountsInput.value) || 1);
-  const kept = accounts.filter(
-    (account) => account.payoutCount > 0 && account.saque.status !== 'fail'
-  );
+  const kept = accounts
+    .filter((account) => {
+      if (account.saque.status === 'fail') return false;
+      if (account.payoutCount > 0) return true;
+      return account.saque.status === 'active' || account.saque.status === 'pending';
+    })
+    .slice(0, targetCount);
   let nextId = accounts.reduce((maxId, account) => Math.max(maxId, account.id), 0) + 1;
   const newCount = Math.max(0, targetCount - kept.length);
   const fresh = Array.from({ length: newCount }, () => ({
@@ -422,9 +424,6 @@ function updateSessionFinance() {
   const returned = totalReturned;
   const invested = totalInvested;
   const profit = returned - invested;
-  investedTotalEl.textContent = formatUSD(invested);
-  profitTotalEl.textContent = formatUSD(profit);
-  profitTotalEl.style.color = profit >= 0 ? '#2f6d4a' : '#9e3a2e';
 
   reportBoughtEl.textContent = String(totalBought);
   reportApprovalEl.textContent = String(totalApprovalPass);
@@ -433,6 +432,8 @@ function updateSessionFinance() {
   reportPayoutsEl.textContent = String(totalPayouts);
   reportInvestedEl.textContent = formatUSD(invested);
   reportReturnEl.textContent = formatUSD(returned);
+  reportProfitEl.textContent = formatUSD(profit);
+  reportProfitEl.style.color = profit >= 0 ? '#2f6d4a' : '#9e3a2e';
   const roi = invested === 0 ? 0 : (profit / invested) * 100;
   reportRoiEl.textContent = `${roi.toFixed(2).replace('.', ',')}%`;
   reportRoiEl.style.color = roi >= 0 ? '#2f6d4a' : '#9e3a2e';
@@ -952,10 +953,15 @@ function startSimulationFlow() {
 
 function startNewCycle() {
   if (approvalTimer || cushionTimer || saqueTimer) return;
-  if (totalSaquePass > 0) {
-    resetKeepingSaque();
+  if (totalBought === 0) {
+    purchaseAccounts(accounts.length);
+    updateStats();
+    updateRunInfoApproval();
+    updateRunInfoCushion();
+    updateRunInfoSaque();
+    setStatus('Pronto para simular', 'ready');
   } else {
-    resetCycleFresh();
+    resetKeepingSaque();
   }
   startSimulationFlow();
 }

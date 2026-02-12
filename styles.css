@@ -207,6 +207,18 @@ select {
 
 .report-summary {
   margin-top: 10px;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.report-summary div {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 84px;
+  padding: 10px 8px;
 }
 
 .summary div {
@@ -225,6 +237,10 @@ select {
   display: block;
   font-size: 18px;
   margin-top: 4px;
+}
+
+.report-summary strong {
+  font-size: 14px;
 }
 
 .actions {
@@ -509,5 +525,15 @@ button:disabled {
 
   .status {
     align-self: flex-start;
+  }
+
+  .report-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 721px) and (max-width: 1400px) {
+  .report-summary {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
