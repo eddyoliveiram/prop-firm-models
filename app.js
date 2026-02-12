@@ -6,6 +6,7 @@ const presetModelInput = document.getElementById('presetModel');
 const stopAllBtn = document.getElementById('stopAll');
 const resetAllBtn = document.getElementById('resetAll');
 const resetKeepSaqueBtn = document.getElementById('resetKeepSaque');
+const showAccountsInput = document.getElementById('showAccounts');
 const targetInput = document.getElementById('target');
 const ddInput = document.getElementById('dd');
 const ddTypeApprovalTrailing = document.getElementById('ddTypeTrailing');
@@ -336,11 +337,13 @@ function resetKeepingSaque() {
 }
 
 function updateStats() {
-  accounts.forEach((account) => {
-    updateAccountCard('approval', account.id);
-    updateAccountCard('cushion', account.id);
-    updateAccountCard('saque', account.id);
-  });
+  if (isAccountRenderingEnabled()) {
+    accounts.forEach((account) => {
+      updateAccountCard('approval', account.id);
+      updateAccountCard('cushion', account.id);
+      updateAccountCard('saque', account.id);
+    });
+  }
   updateSessionFinance();
 }
 
@@ -447,6 +450,14 @@ function updateResetKeepSaqueState() {
 function renderAccounts(phaseKey) {
   const phase = PHASES[phaseKey];
   const container = phase.accountsGrid;
+  if (!isAccountRenderingEnabled()) {
+    if (container.dataset.renderMode !== 'summary') {
+      container.dataset.renderMode = 'summary';
+      container.innerHTML = '<p class="muted render-disabled-note">Visualização de contas desativada para melhor performance.</p>';
+    }
+    return;
+  }
+  container.dataset.renderMode = 'cards';
   container.innerHTML = '';
   const toRender = accounts.filter((account) => {
     if (phaseKey === 'approval') {
@@ -512,6 +523,7 @@ function renderAccounts(phaseKey) {
 }
 
 function updateAccountCard(phaseKey, accountId) {
+  if (!isAccountRenderingEnabled()) return;
   const phase = PHASES[phaseKey];
   const container = phase.accountsGrid;
   const card = container.querySelector(`[data-account-id="${accountId}"]`);
@@ -549,6 +561,10 @@ function updateAccountCard(phaseKey, accountId) {
     dot.className = `history-dot ${entry.delta >= 0 ? 'positive' : 'negative'}`;
     dotsEl.appendChild(dot);
   });
+}
+
+function isAccountRenderingEnabled() {
+  return !showAccountsInput || showAccountsInput.checked;
 }
 
 function getBreakPoint(phaseKey, phaseState) {
@@ -1139,6 +1155,15 @@ enableSaquePostInput.addEventListener('change', () => {
   updateSaquePostDisabledState();
   updateStats();
 });
+
+if (showAccountsInput) {
+  showAccountsInput.addEventListener('change', () => {
+    renderAccounts('approval');
+    renderAccounts('cushion');
+    renderAccounts('saque');
+    updateStats();
+  });
+}
 
 resetSimulation();
 applySelectedPreset();
