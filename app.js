@@ -28,6 +28,7 @@ const ddSaquePostInput = document.getElementById('ddSaquePost');
 const enableSaquePostInput = document.getElementById('enableSaquePost');
 const speedInput = document.getElementById('speed');
 const accountsInput = document.getElementById('accounts');
+const accountsPerCycleInput = document.getElementById('accountsPerCycle');
 const accountValueInput = document.getElementById('accountValue');
 const payoutInput = document.getElementById('payout');
 const tradesEl = document.getElementById('trades');
@@ -53,6 +54,10 @@ const reportReturnEl = document.getElementById('reportReturn');
 const reportProfitEl = document.getElementById('reportProfit');
 const reportRoiEl = document.getElementById('reportRoi');
 const reportTradesEl = document.getElementById('reportTrades');
+const cycleChartEl = document.getElementById('cycleChart');
+const cycleChartEmptyEl = document.getElementById('cycleChartEmpty');
+const cycleSummaryEl = document.getElementById('cycleSummary');
+const cyclePointsListEl = document.getElementById('cyclePointsList');
 
 let approvalTimer = null;
 let cushionTimer = null;
@@ -69,6 +74,15 @@ let totalApprovalPass = 0;
 let totalCushionPass = 0;
 let totalSaquePass = 0;
 let totalPayouts = 0;
+let totalCyclesPlanned = 0;
+let cycleIndex = 0;
+let remainingAccounts = 0;
+let nextAccountId = 1;
+let currentCycleAccountCount = 0;
+let cycleStartInvested = 0;
+let cycleStartReturned = 0;
+let cycleResults = [];
+let isFinalizingCycle = false;
 
 const PHASES = {
   approval: {
@@ -212,33 +226,54 @@ function purchaseAccounts(count) {
   totalInvested += count * accountValue;
 }
 
+function getTotalAccounts() {
+  return Math.max(1, Number(accountsInput.value) || 1);
+}
+
+function getAccountsPerCycle() {
+  return Math.max(1, Number(accountsPerCycleInput?.value) || 10);
+}
+
+function createAccountsBatch(count) {
+  return Array.from({ length: count }, () => ({
+    id: nextAccountId++,
+    approval: createPhaseState('active'),
+    cushion: createPhaseState('locked'),
+    saque: createPhaseState('locked'),
+    paid: false,
+    payoutCount: 0,
+    lastBreakPhase: null,
+    approvalPassed: false,
+    cushionPassed: false,
+    saqueReached: false,
+  }));
+}
+
+function resetSessionProgress() {
+  approvalTradesExecuted = 0;
+  cushionTradesExecuted = 0;
+  saqueTradesExecuted = 0;
+  totalInvested = 0;
+  totalReturned = 0;
+  totalBought = 0;
+  totalTrades = 0;
+  totalApprovalPass = 0;
+  totalCushionPass = 0;
+  totalSaquePass = 0;
+  totalPayouts = 0;
+  cycleResults = [];
+}
+
 function resetSimulation() {
-  const count = Math.max(1, Number(accountsInput.value) || 1);
-  accounts = Array.from({ length: count }, (_, idx) => ({
-    id: idx + 1,
-    approval: createPhaseState('active'),
-    cushion: createPhaseState('locked'),
-    saque: createPhaseState('locked'),
-    paid: false,
-    payoutCount: 0,
-    lastBreakPhase: null,
-    approvalPassed: false,
-    cushionPassed: false,
-    saqueReached: false,
-  }));
-
-  approvalTradesExecuted = 0;
-  cushionTradesExecuted = 0;
-  saqueTradesExecuted = 0;
-  totalInvested = 0;
-  totalReturned = 0;
-  totalBought = 0;
-  totalTrades = 0;
-  totalApprovalPass = 0;
-  totalCushionPass = 0;
-  totalSaquePass = 0;
-  totalPayouts = 0;
-
+  accounts = [];
+  nextAccountId = 1;
+  cycleIndex = 0;
+  currentCycleAccountCount = 0;
+  remainingAccounts = getTotalAccounts();
+  totalCyclesPlanned = Math.ceil(remainingAccounts / getAccountsPerCycle());
+  isFinalizingCycle = false;
+  resetSessionProgress();
+  renderCycleChart();
   renderAccounts('approval');
   renderAccounts('cushion');
   renderAccounts('saque');
@@ -250,36 +285,19 @@ function resetSimulation() {
   updateResetKeepSaqueState();
 }
 
-function resetCycleFresh() {
-  const count = Math.max(1, Number(accountsInput.value) || 1);
-  accounts = Array.from({ length: count }, (_, idx) => ({
-    id: idx + 1,
-    approval: createPhaseState('active'),
-    cushion: createPhaseState('locked'),
-    saque: createPhaseState('locked'),
-    paid: false,
-    payoutCount: 0,
-    lastBreakPhase: null,
-    approvalPassed: false,
-    cushionPassed: false,
-    saqueReached: false,
-  }));
-
+function prepareNextCycle() {
+  if (remainingAccounts <= 0) return false;
+  const batchSize = Math.min(getAccountsPerCycle(), remainingAccounts);
+  currentCycleAccountCount = batchSize;
+  cycleIndex += 1;
+  cycleStartInvested = totalInvested;
+  cycleStartReturned = totalReturned;
+  accounts = createAccountsBatch(batchSize);
+  remainingAccounts -= batchSize;
   approvalTradesExecuted = 0;
   cushionTradesExecuted = 0;
   saqueTradesExecuted = 0;
-
-  totalInvested = 0;
-  totalReturned = 0;
-  totalBought = 0;
-  totalTrades = 0;
-  totalApprovalPass = 0;
-  totalCushionPass = 0;
-  totalSaquePass = 0;
-  totalPayouts = 0;
-
-  purchaseAccounts(count);
-
+  purchaseAccounts(batchSize);
   renderAccounts('approval');
   renderAccounts('cushion');
   renderAccounts('saque');
@@ -287,53 +305,9 @@ function resetCycleFresh() {
   updateRunInfoApproval();
   updateRunInfoCushion();
   updateRunInfoSaque();
-  setStatus('Pronto para simular', 'ready');
+  setStatus(`Ciclo ${cycleIndex}/${totalCyclesPlanned} pronto para execução`, 'ready');
   updateResetKeepSaqueState();
-}
-
-function resetKeepingSaque() {
-  const targetCount = Math.max(1, Number(accountsInput.value) || 1);
-  const kept = accounts
-    .filter((account) => {
-      if (account.saque.status === 'fail') return false;
-      if (account.payoutCount > 0) return true;
-      return account.saque.status === 'active' || account.saque.status === 'pending';
-    })
-    .slice(0, targetCount);
-  let nextId = accounts.reduce((maxId, account) => Math.max(maxId, account.id), 0) + 1;
-  const newCount = Math.max(0, targetCount - kept.length);
-  const fresh = Array.from({ length: newCount }, () => ({
-    id: nextId++,
-    approval: createPhaseState('active'),
-    cushion: createPhaseState('locked'),
-    saque: createPhaseState('locked'),
-    paid: false,
-    payoutCount: 0,
-    lastBreakPhase: null,
-    approvalPassed: false,
-    cushionPassed: false,
-    saqueReached: false,
-  }));
-
-  accounts = [...kept, ...fresh];
-
-  approvalTradesExecuted = 0;
-  cushionTradesExecuted = 0;
-  saqueTradesExecuted = 0;
-
-  if (newCount > 0) {
-    purchaseAccounts(newCount);
-  }
-
-  renderAccounts('approval');
-  renderAccounts('cushion');
-  renderAccounts('saque');
-  updateStats();
-  updateRunInfoApproval();
-  updateRunInfoCushion();
-  updateRunInfoSaque();
-  setStatus('Pronto para simular', 'ready');
-  updateResetKeepSaqueState();
+  return true;
 }
 
 function updateStats() {
@@ -441,6 +415,70 @@ function updateSessionFinance() {
   reportRoiEl.style.color = roi >= 0 ? '#2f6d4a' : '#9e3a2e';
   reportTradesEl.textContent = String(totalTrades);
   updateResetKeepSaqueState();
+}
+
+function renderCycleChart() {
+  if (!cycleChartEl || !cycleChartEmptyEl || !cycleSummaryEl || !cyclePointsListEl) return;
+  cycleSummaryEl.textContent = `${cycleResults.length}/${totalCyclesPlanned} ciclos executados`;
+  cyclePointsListEl.innerHTML = '';
+
+  if (cycleResults.length === 0) {
+    cycleChartEl.innerHTML = '';
+    cycleChartEmptyEl.style.display = 'grid';
+    return;
+  }
+
+  cycleChartEmptyEl.style.display = 'none';
+  let runningProfit = 0;
+  const cumulativeResults = cycleResults.map((entry) => {
+    runningProfit += entry.profit;
+    return {
+      ...entry,
+      cumulativeProfit: runningProfit,
+    };
+  });
+
+  const values = cumulativeResults.map((entry) => entry.cumulativeProfit);
+  const minValue = Math.min(...values, 0);
+  const maxValue = Math.max(...values, 0);
+  const range = Math.max(1, maxValue - minValue);
+  const width = 1000;
+  const height = 280;
+  const padX = 54;
+  const padY = 26;
+  const innerWidth = width - padX * 2;
+  const innerHeight = height - padY * 2;
+  const stepX = cumulativeResults.length === 1 ? 0 : innerWidth / (cumulativeResults.length - 1);
+  const toY = (value) => padY + ((maxValue - value) / range) * innerHeight;
+  const zeroY = toY(0);
+  const points = cumulativeResults.map((entry, idx) => ({
+    x: padX + stepX * idx,
+    y: toY(entry.cumulativeProfit),
+    ...entry,
+  }));
+  const polyline = points.map((point) => `${point.x},${point.y}`).join(' ');
+
+  cycleChartEl.innerHTML = `
+    <line x1="${padX}" y1="${zeroY}" x2="${width - padX}" y2="${zeroY}" stroke="#334155" stroke-width="1.5" />
+    <polyline points="${polyline}" fill="none" stroke="#38bdf8" stroke-width="2.5" />
+    ${points
+      .map((point) => `
+      <circle cx="${point.x}" cy="${point.y}" r="4" fill="${point.profit >= 0 ? '#22c55e' : '#ef4444'}" />
+      <text x="${point.x}" y="${point.y < 40 ? point.y + 14 : point.y - 8}" text-anchor="middle" font-size="10" fill="#e2e8f0">${formatUSD(point.cumulativeProfit)}</text>
+      <text x="${point.x}" y="${height - 8}" text-anchor="middle" font-size="11" fill="#94a3b8">C${point.cycle}</text>
+    `)
+      .join('')}
+  `;
+
+  cumulativeResults.forEach((entry) => {
+    const item = document.createElement('div');
+    item.className = `cycle-point ${entry.profit >= 0 ? 'positive' : 'negative'}`;
+    item.innerHTML = `
+      <span>Ciclo ${entry.cycle}</span>
+      <strong>${formatUSD(entry.profit)}</strong>
+    `;
+    cyclePointsListEl.appendChild(item);
+  });
 }
 
 function updateResetKeepSaqueState() {
@@ -618,6 +656,44 @@ function statusLabel(phaseKey, status, account) {
   return 'Ativa';
 }
 
+function completeCycleAndContinue() {
+  if (isFinalizingCycle) return;
+  isFinalizingCycle = true;
+  stopSimulationFlow();
+
+  const invested = Math.max(0, totalInvested - cycleStartInvested);
+  const returned = Math.max(0, totalReturned - cycleStartReturned);
+  const profit = returned - invested;
+  cycleResults.push({
+    cycle: cycleIndex,
+    accounts: currentCycleAccountCount,
+    invested,
+    returned,
+    profit,
+  });
+  renderCycleChart();
+  updateStats();
+
+  if (remainingAccounts > 0) {
+    const ready = prepareNextCycle();
+    isFinalizingCycle = false;
+    if (ready) {
+      setTimeout(startSimulationFlow, 0);
+    }
+    return;
+  }
+
+  accounts = [];
+  renderAccounts('approval');
+  renderAccounts('cushion');
+  renderAccounts('saque');
+  setStatus('Simulação concluída', 'success');
+  updateRunInfoApproval();
+  updateRunInfoCushion();
+  updateRunInfoSaque();
+  isFinalizingCycle = false;
+}
+
 function runApprovalStep() {
   const trades = getTradesFrom(tradesEl);
   if (trades.length === 0) return;
@@ -626,8 +702,7 @@ function runApprovalStep() {
   const dd = Number(ddInput.value) || 0;
   const activeAccounts = accounts.filter((account) => account.approval.status === 'active');
   if (activeAccounts.length === 0) {
-    stopApproval();
-    setStatus('Fase de Aprovação encerrada', 'success');
+    completeCycleAndContinue();
     return;
   }
 
@@ -705,7 +780,7 @@ function runApprovalStep() {
       startSaque();
       return;
     }
-    setStatus('Fase de Aprovação encerrada', 'success');
+    completeCycleAndContinue();
   } else {
     setStatus(`Executando Fase de Aprovação… (${active} ativa(s))`, 'running');
   }
@@ -726,8 +801,7 @@ function runCushionStep() {
   );
 
   if (activeAccounts.length === 0) {
-    stopCushion();
-    setStatus('Fase Colchão encerrada', 'success');
+    completeCycleAndContinue();
     return;
   }
 
@@ -799,7 +873,7 @@ function runCushionStep() {
       startSaque();
       return;
     }
-    setStatus('Fase Colchão encerrada', 'success');
+    completeCycleAndContinue();
   } else {
     setStatus(`Executando Fase Colchão… (${stillActive} ativa(s))`, 'running');
   }
@@ -815,8 +889,7 @@ function runSaqueStep() {
   });
 
   if (activeAccounts.length === 0) {
-    stopSaque();
-    setStatus('Fase Saque encerrada', 'success');
+    completeCycleAndContinue();
     return;
   }
 
@@ -882,8 +955,7 @@ function runSaqueStep() {
   }).length;
 
   if (stillActive === 0) {
-    stopSaque();
-    setStatus('Fase Saque encerrada', 'success');
+    completeCycleAndContinue();
   } else {
     setStatus(`Executando Fase Saque… (${stillActive} ativa(s))`, 'running');
   }
@@ -963,20 +1035,17 @@ function stopSaque() {
 
 function startSimulationFlow() {
   if (approvalTimer || cushionTimer || saqueTimer) return;
+  if (accounts.length === 0) {
+    const ready = prepareNextCycle();
+    if (!ready) return;
+  }
   startApproval();
 }
 
 function startNewCycle() {
   if (approvalTimer || cushionTimer || saqueTimer) return;
-  if (totalBought === 0) {
-    purchaseAccounts(accounts.length);
-    updateStats();
-    updateRunInfoApproval();
-    updateRunInfoCushion();
-    updateRunInfoSaque();
-    setStatus('Pronto para simular', 'ready');
-  } else {
-    resetKeepingSaque();
+  if (remainingAccounts <= 0 && accounts.length === 0) {
+    resetSimulation();
   }
   startSimulationFlow();
 }
@@ -1142,9 +1211,12 @@ enableCushionInput.addEventListener('change', () => {
   updateRunInfoSaque();
 });
 
-accountsInput.addEventListener('input', () => {
-  if (approvalTimer || cushionTimer || saqueTimer) return;
-  resetSimulation();
+[accountsInput, accountsPerCycleInput].forEach((input) => {
+  if (!input) return;
+  input.addEventListener('input', () => {
+    if (approvalTimer || cushionTimer || saqueTimer) return;
+    resetSimulation();
+  });
 });
 
 [accountValueInput, payoutInput].forEach((input) => {

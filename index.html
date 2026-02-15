@@ -33,8 +33,12 @@
       <div class="card full">
         <h2>Configuração da sessão</h2>
         <div class="field">
-          <label for="accounts">Número de contas na sessão</label>
+          <label for="accounts">Total de contas</label>
           <input id="accounts" type="number" step="1" min="1" value="10" />
+        </div>
+        <div class="field">
+          <label for="accountsPerCycle">Execução de contas por ciclo</label>
+          <input id="accountsPerCycle" type="number" step="1" min="1" value="10" />
         </div>
         <div class="field">
           <label for="accountValue">Valor da conta (US$)</label>
@@ -193,7 +197,7 @@
         <h2>Controles da simulação</h2>
         <div class="field">
           <label class="radio">
-            <input type="checkbox" id="showAccounts" checked />
+            <input type="checkbox" id="showAccounts" />
             Mostrar contas em tela
           </label>
         </div>
@@ -254,6 +258,17 @@
           </div>
         </div>
         <p class="muted">Retorno considera somente contas aprovadas na fase Saque.</p>
+        <div class="cycle-chart-block">
+          <div class="row">
+            <h3>Resultado por ciclo</h3>
+            <span id="cycleSummary" class="muted">0/0 ciclos executados</span>
+          </div>
+          <div class="cycle-chart-wrap">
+            <svg id="cycleChart" viewBox="0 0 1000 280" preserveAspectRatio="none" aria-label="Gráfico acumulado por ciclo"></svg>
+            <p id="cycleChartEmpty" class="muted">Sem ciclos executados.</p>
+          </div>
+          <div id="cyclePointsList" class="cycle-points"></div>
+        </div>
       </div>
     </section>
 
