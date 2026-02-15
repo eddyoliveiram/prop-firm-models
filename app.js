@@ -1045,7 +1045,11 @@ function startSimulationFlow() {
 function startNewCycle() {
   if (approvalTimer || cushionTimer || saqueTimer) return;
   if (remainingAccounts <= 0 && accounts.length === 0) {
-    resetSimulation();
+    const newBlockAccounts = getTotalAccounts();
+    remainingAccounts = newBlockAccounts;
+    totalCyclesPlanned += Math.ceil(newBlockAccounts / getAccountsPerCycle());
+    renderCycleChart();
+    setStatus('Novo bloco de ciclos adicionado', 'ready');
   }
   startSimulationFlow();
 }
