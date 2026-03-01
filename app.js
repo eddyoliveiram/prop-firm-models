@@ -3,6 +3,7 @@ const addTradeBtn = document.getElementById('addTrade');
 const addTradeCushionBtn = document.getElementById('addTradeCushion');
 const addTradeSaqueBtn = document.getElementById('addTradeSaque');
 const presetModelInput = document.getElementById('presetModel');
+const showTheoreticalAllInInput = document.getElementById('showTheoreticalAllIn');
 const stopAllBtn = document.getElementById('stopAll');
 const resetAllBtn = document.getElementById('resetAll');
 const resetKeepSaqueBtn = document.getElementById('resetKeepSaque');
@@ -54,6 +55,10 @@ const reportReturnEl = document.getElementById('reportReturn');
 const reportProfitEl = document.getElementById('reportProfit');
 const reportRoiEl = document.getElementById('reportRoi');
 const reportTradesEl = document.getElementById('reportTrades');
+const phaseEstimateApprovalEl = document.getElementById('phaseEstimateApproval');
+const phaseEstimateCushionEl = document.getElementById('phaseEstimateCushion');
+const phaseEstimateSaqueEl = document.getElementById('phaseEstimateSaque');
+const phaseEstimateSaquePostEl = document.getElementById('phaseEstimateSaquePost');
 const cycleChartEl = document.getElementById('cycleChart');
 const cycleChartEmptyEl = document.getElementById('cycleChartEmpty');
 const cycleSummaryEl = document.getElementById('cycleSummary');
@@ -125,11 +130,130 @@ function formatUSD(value) {
   return `US$ ${value.toLocaleString('en-US')}`;
 }
 
+function formatPct(value) {
+  return `${(value * 100).toFixed(2).replace('.', ',')}%`;
+}
+
 function calcProbability(risk, reward) {
   const r = Math.max(0, risk);
   const w = Math.max(0, reward);
   if (r + w === 0) return 0;
   return r / (r + w);
+}
+
+function getTheoreticalPhaseProbability(targetValue, trades) {
+  const target = Number(targetValue) || 0;
+  if (target <= 0) {
+    return { probability: 1, tradesNeeded: 0, valid: true };
+  }
+  if (!trades || trades.length === 0) {
+    return { probability: 0, tradesNeeded: 0, valid: false };
+  }
+
+  let cumulativeReward = 0;
+  let probability = 1;
+  let tradesNeeded = 0;
+  const maxTrades = 2000;
+
+  while (cumulativeReward < target && tradesNeeded < maxTrades) {
+    const trade = trades[tradesNeeded % trades.length];
+    if ((Number(trade.reward) || 0) <= 0) {
+      return { probability: 0, tradesNeeded, valid: false };
+    }
+    cumulativeReward += Number(trade.reward) || 0;
+    probability *= Number(trade.prob) || 0;
+    tradesNeeded += 1;
+  }
+
+  if (tradesNeeded >= maxTrades) {
+    return { probability: 0, tradesNeeded, valid: false };
+  }
+  return { probability, tradesNeeded, valid: true };
+}
+
+function updatePhaseEstimates() {
+  const totalAccounts = Math.max(1, Number(accountsInput?.value) || 1);
+  const approvalCalc = getTheoreticalPhaseProbability(Number(targetInput.value) || 0, getTradesFrom(tradesEl));
+  const cushionCalc = getTheoreticalPhaseProbability(Number(targetCushionInput.value) || 0, getTradesFrom(tradesCushionEl));
+  const saqueCalc = getTheoreticalPhaseProbability(Number(targetSaqueInput.value) || 0, getTradesFrom(tradesSaqueEl));
+  const saquePostCalc = getTheoreticalPhaseProbability(Number(targetSaquePostInput.value) || 0, getTradesFrom(tradesSaquePostEl));
+
+  const fmtFunnel = (passed, base) => {
+    const safeBase = Math.max(1, base);
+    return `${passed}/${base} contas (${formatPct(passed / safeBase)})`;
+  };
+
+  const approvalPassed = approvalCalc.valid ? Math.round(totalAccounts * approvalCalc.probability) : 0;
+  const approvalText = approvalCalc.valid
+    ? `All-in: Prob. teórica: ${formatPct(approvalCalc.probability)} | Trades p/ meta: ${approvalCalc.tradesNeeded} | Estimativa: ${fmtFunnel(approvalPassed, totalAccounts)}`
+    : 'All-in: Prob. teórica: indisponível (revise meta/trades da fase)';
+  if (phaseEstimateApprovalEl) {
+    phaseEstimateApprovalEl.textContent = approvalText;
+  }
+
+  const cushionBase = approvalPassed;
+  const cushionPassed = cushionCalc.valid ? Math.round(cushionBase * cushionCalc.probability) : 0;
+
+  if (!isCushionEnabled()) {
+    if (phaseEstimateCushionEl) {
+      phaseEstimateCushionEl.textContent = 'All-in: Fase desabilitada';
+    }
+    const saqueBase = approvalPassed;
+    const saquePassed = saqueCalc.valid ? Math.round(saqueBase * saqueCalc.probability) : 0;
+    if (phaseEstimateSaqueEl) {
+      phaseEstimateSaqueEl.textContent = saqueCalc.valid
+        ? `All-in: Prob. teórica: ${formatPct(saqueCalc.probability)} | Trades p/ meta: ${saqueCalc.tradesNeeded} | Estimativa: ${fmtFunnel(saquePassed, saqueBase)}`
+        : 'All-in: Prob. teórica: indisponível (revise meta/trades da fase)';
+    }
+    if (phaseEstimateSaquePostEl) {
+      if (!isSaquePostEnabled()) {
+        phaseEstimateSaquePostEl.textContent = 'All-in: Subfase desabilitada';
+      } else if (!saqueCalc.valid || !saquePostCalc.valid) {
+        phaseEstimateSaquePostEl.textContent = 'All-in: Prob. teórica: indisponível (revise meta/trades da subfase)';
+      } else {
+        const firstSaqueAccounts = saquePassed;
+        const secondSaqueAccounts = Math.round(firstSaqueAccounts * saquePostCalc.probability);
+        const postProb = saquePostCalc.probability;
+        const additionalExpected = postProb >= 1 ? Number.POSITIVE_INFINITY : firstSaqueAccounts * (postProb / (1 - postProb));
+        const totalPayoutsExpected = postProb >= 1 ? Number.POSITIVE_INFINITY : firstSaqueAccounts + additionalExpected;
+        const totalPayoutsText = Number.isFinite(totalPayoutsExpected) ? `${Math.round(totalPayoutsExpected)} saques` : 'infinito (pós-saque = 100%)';
+        phaseEstimateSaquePostEl.textContent = `All-in: Prob. teórica pós-saque: ${formatPct(postProb)} | Trades p/ meta: ${saquePostCalc.tradesNeeded} | Estimativa saques totais: ${totalPayoutsText}`;
+      }
+    }
+    return;
+  }
+
+  const cushionText = cushionCalc.valid
+    ? `All-in: Prob. teórica: ${formatPct(cushionCalc.probability)} | Trades p/ meta: ${cushionCalc.tradesNeeded} | Estimativa: ${fmtFunnel(cushionPassed, cushionBase)}`
+    : 'All-in: Prob. teórica: indisponível (revise meta/trades da fase)';
+  if (phaseEstimateCushionEl) {
+    phaseEstimateCushionEl.textContent = cushionText;
+  }
+
+  const saqueBase = cushionPassed;
+  const saquePassed = saqueCalc.valid ? Math.round(saqueBase * saqueCalc.probability) : 0;
+  const saqueText = saqueCalc.valid
+    ? `All-in: Prob. teórica: ${formatPct(saqueCalc.probability)} | Trades p/ meta: ${saqueCalc.tradesNeeded} | Estimativa: ${fmtFunnel(saquePassed, saqueBase)}`
+    : 'All-in: Prob. teórica: indisponível (revise meta/trades da fase)';
+  if (phaseEstimateSaqueEl) {
+    phaseEstimateSaqueEl.textContent = saqueText;
+  }
+
+  if (phaseEstimateSaquePostEl) {
+    if (!isSaquePostEnabled()) {
+      phaseEstimateSaquePostEl.textContent = 'All-in: Subfase desabilitada';
+    } else if (!approvalCalc.valid || !cushionCalc.valid || !saqueCalc.valid || !saquePostCalc.valid) {
+      phaseEstimateSaquePostEl.textContent = 'All-in: Prob. teórica: indisponível (revise meta/trades da subfase)';
+    } else {
+      const firstSaqueAccounts = saquePassed;
+      const secondSaqueAccounts = Math.round(firstSaqueAccounts * saquePostCalc.probability);
+      const postProb = saquePostCalc.probability;
+      const additionalExpected = postProb >= 1 ? Number.POSITIVE_INFINITY : firstSaqueAccounts * (postProb / (1 - postProb));
+      const totalPayoutsExpected = postProb >= 1 ? Number.POSITIVE_INFINITY : firstSaqueAccounts + additionalExpected;
+      const totalPayoutsText = Number.isFinite(totalPayoutsExpected) ? `${Math.round(totalPayoutsExpected)} saques` : 'infinito (pós-saque = 100%)';
+      phaseEstimateSaquePostEl.textContent = `All-in: Prob. teórica pós-saque: ${formatPct(postProb)} | Trades p/ meta: ${saquePostCalc.tradesNeeded} | Estimativa saques totais: ${totalPayoutsText}`;
+    }
+  }
 }
 
 function updateProbability(tradeEl) {
@@ -138,6 +262,7 @@ function updateProbability(tradeEl) {
   const prob = calcProbability(risk, reward);
   const probEl = tradeEl.querySelector('.probValue');
   probEl.textContent = `${(prob * 100).toFixed(2).replace('.', ',')}%`;
+  updatePhaseEstimates();
 }
 
 function addTradeTo(container, { risk = 1000, reward = 1000 } = {}) {
@@ -207,6 +332,18 @@ function updateSaquePostDisabledState() {
   if (saquePostCard) {
     saquePostCard.classList.toggle('disabled', disabled);
   }
+}
+
+function isTheoreticalAllInEnabled() {
+  return Boolean(showTheoreticalAllInInput?.checked);
+}
+
+function updateTheoreticalVisibility() {
+  const visible = isTheoreticalAllInEnabled();
+  [phaseEstimateApprovalEl, phaseEstimateCushionEl, phaseEstimateSaqueEl, phaseEstimateSaquePostEl].forEach((el) => {
+    if (!el) return;
+    el.classList.toggle('hidden', !visible);
+  });
 }
 
 function createPhaseState(initialStatus) {
@@ -319,6 +456,7 @@ function updateStats() {
     });
   }
   updateSessionFinance();
+  updatePhaseEstimates();
 }
 
 function updateRunInfoApproval() {
@@ -1064,43 +1202,17 @@ addTradeBtn.addEventListener('click', () => addTradeTo(tradesEl));
 addTradeCushionBtn.addEventListener('click', () => addTradeTo(tradesCushionEl, { risk: 2000, reward: 2000 }));
 addTradeSaqueBtn.addEventListener('click', () => addTradeTo(tradesSaqueEl, { risk: 250, reward: 250 }));
 addTradeSaquePostBtn.addEventListener('click', () => addTradeTo(tradesSaquePostEl, { risk: 1400, reward: 300 }));
-function applyPresetJota() {
-  payoutInput.value = '1350';
-  targetCushionInput.value = '2000';
-  ddCushionInput.value = '-2000';
-  targetSaqueInput.value = '1000';
-  enableSaquePostInput.checked = true;
-  targetSaquePostInput.value = '1500';
-  ddSaquePostInput.value = '-1400';
-  setTradesFor(tradesEl, [
-    { risk: 2000, reward: 500 },
-    { risk: 2500, reward: 500 },
-    { risk: 3000, reward: 500 },
-  ]);
-  setTradesFor(tradesCushionEl, [
-    { risk: 2000, reward: 500 },
-    { risk: 2500, reward: 500 },
-    { risk: 3000, reward: 500 },
-    { risk: 3500, reward: 500 },
-  ]);
-  setTradesFor(tradesSaqueEl, [
-    { risk: 2000, reward: 250 },
-    { risk: 2000, reward: 250 },
-    { risk: 2000, reward: 250 },
-    { risk: 2000, reward: 250 },
-  ]);
-  setTradesFor(tradesSaquePostEl, [
-    { risk: 1400, reward: 300 },
-    { risk: 1700, reward: 300 },
-    { risk: 2000, reward: 300 },
-    { risk: 2300, reward: 300 },
-    { risk: 2600, reward: 300 },
-  ]);
-  updateSaquePostDisabledState();
-  updateStats();
+function refreshSessionAfterPreset() {
+  if (approvalTimer || cushionTimer || saqueTimer) {
+    updateStats();
+    return;
+  }
+  resetSimulation();
 }
 
 function applyPresetLucid50k() {
+  accountsInput.value = '120';
+  accountsPerCycleInput.value = '10';
   payoutInput.value = '1350';
   targetCushionInput.value = '2000';
   ddCushionInput.value = '-2000';
@@ -1127,10 +1239,12 @@ function applyPresetLucid50k() {
     { risk: 2600, reward: 300 },
   ]);
   updateSaquePostDisabledState();
-  updateStats();
+  refreshSessionAfterPreset();
 }
 
 function applyPresetLucid50kSaque900() {
+  accountsInput.value = '120';
+  accountsPerCycleInput.value = '10';
   payoutInput.value = '900';
   targetCushionInput.value = '1000';
   ddCushionInput.value = '-2000';
@@ -1150,14 +1264,14 @@ function applyPresetLucid50kSaque900() {
     { risk: 2000, reward: 250 },
   ]);
   setTradesFor(tradesSaquePostEl, [
-    { risk: 900, reward: 300 },
-    { risk: 1200, reward: 300 },
-    { risk: 1500, reward: 300 },
-    { risk: 1700, reward: 300 },
-    { risk: 1900, reward: 300 },
+    { risk: 900, reward: 200 },
+    { risk: 1200, reward: 200 },
+    { risk: 1500, reward: 200 },
+    { risk: 1700, reward: 200 },
+    { risk: 1900, reward: 200 },
   ]);
   updateSaquePostDisabledState();
-  updateStats();
+  refreshSessionAfterPreset();
 }
 
 function applySelectedPreset() {
@@ -1170,7 +1284,7 @@ function applySelectedPreset() {
     applyPresetLucid50kSaque900();
     return;
   }
-  applyPresetJota();
+  applyPresetLucid50k();
 }
 
 if (presetModelInput) {
@@ -1232,6 +1346,13 @@ enableSaquePostInput.addEventListener('change', () => {
   updateStats();
 });
 
+if (showTheoreticalAllInInput) {
+  showTheoreticalAllInInput.addEventListener('change', () => {
+    updateTheoreticalVisibility();
+    updateStats();
+  });
+}
+
 if (showAccountsInput) {
   showAccountsInput.addEventListener('change', () => {
     renderAccounts('approval');
@@ -1246,3 +1367,5 @@ applySelectedPreset();
 updateCushionDisabledState();
 updateResetKeepSaqueState();
 updateSaquePostDisabledState();
+updateTheoreticalVisibility();
+

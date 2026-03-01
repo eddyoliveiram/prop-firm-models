@@ -153,6 +153,19 @@ h3 {
   margin-bottom: 14px;
 }
 
+.phase-estimate {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--border);
+  background: #0f172a;
+  line-height: 1.5;
+}
+
+.phase-estimate.hidden {
+  display: none;
+}
+
 label {
   font-size: 13px;
   color: var(--muted);

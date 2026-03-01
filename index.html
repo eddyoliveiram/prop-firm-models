@@ -21,10 +21,15 @@
         <div class="field">
           <label for="presetModel">Selecione a pré-definição</label>
           <select id="presetModel">
-            <option value="lucid50k_jota" selected>LUCID 50k [Modelo JOTA]</option>
-            <option value="lucid50k_1350">LUCID 50k [Saque 1.5k => $1.350]</option>
+            <option value="lucid50k_1350" selected>LUCID 50k [Saque 1.5k => $1.350]</option>
             <option value="lucid50k_900">LUCID 50K [Saque 1k => $900]</option>
           </select>
+        </div>
+        <div class="field">
+          <label class="radio">
+            <input type="checkbox" id="showTheoreticalAllIn" />
+            Mostrar Prob. Teórica All-in
+          </label>
         </div>
       </div>
     </section>
@@ -79,6 +84,7 @@
           <label for="speed">Velocidade (segundos)</label>
           <input id="speed" type="number" step="0.1" value="0.1" />
         </div>
+        <div id="phaseEstimateApproval" class="phase-estimate muted"></div>
       </div>
 
       <div class="card">
@@ -121,6 +127,7 @@
             </label>
           </div>
         </div>
+        <div id="phaseEstimateCushion" class="phase-estimate muted"></div>
       </div>
 
       <div class="card" id="cushionTradesCard">
@@ -157,6 +164,7 @@
             </label>
           </div>
         </div>
+        <div id="phaseEstimateSaque" class="phase-estimate muted"></div>
       </div>
 
       <div class="card">
@@ -187,6 +195,7 @@
             <button id="addTradeSaquePost" class="ghost">+ Adicionar trade</button>
           </div>
           <p class="muted">Configuração aplicada somente após o primeiro saque da conta.</p>
+          <div id="phaseEstimateSaquePost" class="phase-estimate muted"></div>
           <div id="tradesSaquePost" class="trades"></div>
         </div>
       </div>
