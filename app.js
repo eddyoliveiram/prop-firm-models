@@ -1265,10 +1265,10 @@ function applyPresetLucid50kSaque900() {
   ]);
   setTradesFor(tradesSaquePostEl, [
     { risk: 900, reward: 200 },
-    { risk: 1200, reward: 200 },
+    { risk: 1100, reward: 200 },
+    { risk: 1300, reward: 200 },
     { risk: 1500, reward: 200 },
     { risk: 1700, reward: 200 },
-    { risk: 1900, reward: 200 },
   ]);
   updateSaquePostDisabledState();
   refreshSessionAfterPreset();
