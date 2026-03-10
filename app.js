@@ -1213,6 +1213,7 @@ function refreshSessionAfterPreset() {
 function applyPresetLucid50k() {
   accountsInput.value = '120';
   accountsPerCycleInput.value = '10';
+  accountValueInput.value = '91';
   payoutInput.value = '1350';
   targetCushionInput.value = '2000';
   ddCushionInput.value = '-2000';
@@ -1245,6 +1246,7 @@ function applyPresetLucid50k() {
 function applyPresetLucid50kSaque900() {
   accountsInput.value = '120';
   accountsPerCycleInput.value = '10';
+  accountValueInput.value = '91';
   payoutInput.value = '900';
   targetCushionInput.value = '1000';
   ddCushionInput.value = '-2000';
@@ -1274,6 +1276,39 @@ function applyPresetLucid50kSaque900() {
   refreshSessionAfterPreset();
 }
 
+function applyPresetLucid50kSaque1800() {
+  accountsInput.value = '120';
+  accountsPerCycleInput.value = '10';
+  accountValueInput.value = '91';
+  payoutInput.value = '1800';
+  targetInput.value = '3000';
+  ddInput.value = '-2000';
+  targetCushionInput.value = '3000';
+  ddCushionInput.value = '-2000';
+  targetSaqueInput.value = '1000';
+  ddSaqueInput.value = '-2900';
+  enableSaquePostInput.checked = true;
+  targetSaquePostInput.value = '2000';
+  ddSaquePostInput.value = '-1900';
+  setTradesFor(tradesEl, [{ risk: 2000, reward: 1500 }]);
+  setTradesFor(tradesCushionEl, [{ risk: 2000, reward: 3000 }]);
+  setTradesFor(tradesSaqueEl, [
+    { risk: 2900, reward: 250 },
+    { risk: 3150, reward: 250 },
+    { risk: 3400, reward: 250 },
+    { risk: 3650, reward: 250 },
+  ]);
+  setTradesFor(tradesSaquePostEl, [
+    { risk: 1900, reward: 400 },
+    { risk: 2300, reward: 400 },
+    { risk: 2700, reward: 400 },
+    { risk: 3100, reward: 400 },
+    { risk: 3500, reward: 400 },
+  ]);
+  updateSaquePostDisabledState();
+  refreshSessionAfterPreset();
+}
+
 function applySelectedPreset() {
   if (!presetModelInput) return;
   if (presetModelInput.value === 'lucid50k_1350') {
@@ -1282,6 +1317,10 @@ function applySelectedPreset() {
   }
   if (presetModelInput.value === 'lucid50k_900') {
     applyPresetLucid50kSaque900();
+    return;
+  }
+  if (presetModelInput.value === 'lucid50k_1800') {
+    applyPresetLucid50kSaque1800();
     return;
   }
   applyPresetLucid50k();
